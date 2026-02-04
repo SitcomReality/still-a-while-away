@@ -7,7 +7,7 @@ export const ROAD_WIDTH = 2.2;       // Fraction of screen width at bottom
 export const ROAD_TOP_WIDTH = 0.02;   // Road width at the horizon
 export const ROAD_SPEED = 20;         // Base driving speed (meters per second)
 export const ROAD_SEGMENTS = 70;      // Number of polygons used to draw the road
-export const VIEW_DISTANCE = 300;     // How far ahead the road is rendered
+export const VIEW_DISTANCE = 500;     // How far ahead the road is rendered
 
 // Perspective and Camera
 export const PERSPECTIVE_K = 8;      // Projection constant (y ~ 1/z)
@@ -28,7 +28,7 @@ export const MARKING_WIDTH_SCALE = 20;   // Width multiplier based on perspectiv
 export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren't drawn
 
 // Environment & World
-export const ENV_VIEW_DISTANCE = 400;
+export const ENV_VIEW_DISTANCE = 500;
 export const ENV_REMOVAL_THRESHOLD = -20;
 export const ENV_GLOBAL_SCALE = 30;   // Size multiplier for trees/buildings
 
