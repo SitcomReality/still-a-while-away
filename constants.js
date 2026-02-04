@@ -38,6 +38,6 @@ export const TRAFFIC_REMOVAL_THRESHOLD = -10;
 export const TRAFFIC_SIZE_SCALE = 350;
 
 // Heading and UI
-export const HEADING_SENSITIVITY = 0.5;
+export const HEADING_SENSITIVITY = 30.0;
 export const COMPASS_WIDTH = 300;
 export const COMPASS_HEIGHT = 40;

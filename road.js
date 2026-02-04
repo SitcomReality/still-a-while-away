@@ -37,19 +37,11 @@ export class RoadSystem {
   update(dt, biome) {
     this.distance += this.speed * dt;
     
-    // Update curve using noise
-    const curveNoise = noise(this.distance * CONST.CURVE_NOISE_FREQ + this.curveNoiseOffset);
-    this.targetCurve = curveNoise * CONST.CURVE_NOISE_AMP;
-    this.curve += (this.targetCurve - this.curve) * dt * 2;
-    
-    // Update slope using noise
-    const slopeNoise = noise(this.distance * CONST.SLOPE_NOISE_FREQ + this.slopeNoiseOffset);
-    this.targetSlope = slopeNoise * CONST.SLOPE_NOISE_AMP;
-    this.slope += (this.targetSlope - this.slope) * dt * 1.5;
+    // Persistent heading and slope based on absolute distance.
+    // This ensures the compass and horizon are always synced with the noise field.
+    this.heading = this.getCurveAt(0) * CONST.HEADING_SENSITIVITY;
+    this.slope = this.getSlopeAt(0);
 
-    // Update heading based on curve
-    this.heading += this.curve * dt * CONST.HEADING_SENSITIVITY;
-    
     // Update markings
     this.markings.forEach(m => {
       m.distance -= this.speed * dt;
