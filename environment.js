@@ -76,10 +76,10 @@ export class EnvironmentSystem {
       };
     } else if (type === 'building') {
       return {
-        height: 30 + Math.random() * 50,
-        width: 20 + Math.random() * 35,
-        depth: 15 + Math.random() * 25,
-        windows: Math.floor(Math.random() * 15) + 6,
+        height: 30 + Math.random() * 40,
+        width: 20 + Math.random() * 30,
+        depth: 30 + Math.random() * 40,
+        windows: Math.floor(Math.random() * 8) + 2,
         color: '#1a1a2a'
       };
     } else if (type === 'fence') {
@@ -117,20 +117,13 @@ export class EnvironmentSystem {
 
       const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
-      // Calculate road tangent angle at this distance for 3D orientation
-      const delta = 1.0;
-      const posNext = this.road.getRoadPosAt(relDist + delta, w, h);
-      const dx = posNext.x - pos.x;
-      const dy = posNext.y - pos.y;
-      const angle = Math.atan2(dy, dx);
-
       // Render based on type
-      if (f.type === 'tree') {
+      if (f.type === 'building') {
+        this.renderBuilding(ctx, w, h, f, this.road);
+      } else if (f.type === 'tree') {
         this.renderTree(ctx, x, y, renderScale, f);
       } else if (f.type === 'lightpole') {
         this.renderLightpole(ctx, x, y, renderScale, f);
-      } else if (f.type === 'building') {
-        this.renderBuilding(ctx, x, y, renderScale, f, angle);
       } else if (f.type === 'fence') {
         this.renderFence(ctx, x, y, renderScale, f);
       } else if (f.type === 'bush') {
@@ -198,59 +191,161 @@ export class EnvironmentSystem {
     }
   }
   
-  renderBuilding(ctx, x, y, scale, building, angle) {
-    const height = building.height * scale;
-    const width = building.width * scale;
-    const depth = building.depth * scale;
+  renderBuilding(ctx, w, h, f, road) {
+    const relDist = f.distance - road.distance;
+    const depth = f.depth || 30;
     
-    if (height < 5) return;
+    // Calculate Near and Far Z-depths relative to camera
+    const zNear = relDist - depth / 2;
+    const zFar = relDist + depth / 2;
     
-    // Normalize angle: 0 is straight, positive is road turning right
-    const normAngle = angle + Math.PI / 2;
+    if (zFar < 1) return;
     
-    // Calculate visible widths based on road direction (tangent)
-    const frontW = width * Math.abs(Math.cos(normAngle));
-    const sideW = depth * Math.abs(Math.sin(normAngle));
+    // Clamp zNear to camera plane to simulate passing the building
+    const effZNear = Math.max(1, zNear); 
+    const posNear = road.getRoadPosAt(effZNear, w, h);
+    const posFar = road.getRoadPosAt(zFar, w, h);
     
-    // Determine which side is visible (simplified for faux-3D)
-    const showSideLeft = normAngle < 0;
+    if (posNear.scale <= 0 || posFar.scale <= 0) return;
     
-    // Draw Side Wall (shaded darker)
-    ctx.fillStyle = '#080812';
-    if (showSideLeft) {
-      ctx.fillRect(x - frontW / 2 - sideW, y - height, sideW, height);
+    // Lateral offset
+    const sideSign = f.side === 'left' ? -1 : 1;
+    const xOffsetNear = w * f.offset * sideSign * posNear.scale;
+    const xOffsetFar = w * f.offset * sideSign * posFar.scale;
+    
+    const cxNear = posNear.x + xOffsetNear;
+    const cxFar = posFar.x + xOffsetFar;
+    
+    // Dimensions
+    const wNear = f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale;
+    const wFar = f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale;
+    const hNear = f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale;
+    const hFar = f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale;
+    
+    const yNear = posNear.y;
+    const yFar = posFar.y;
+    
+    // Front Face (Near) Coords
+    const fl = cxNear - wNear / 2;
+    const fr = cxNear + wNear / 2;
+    const ft = yNear - hNear;
+    
+    // Back Face (Far) Coords
+    const bl = cxFar - wFar / 2;
+    const br = cxFar + wFar / 2;
+    const bt = yFar - hFar;
+    
+    // Draw Side Wall
+    // Left building: Right Side Visible (NearRight -> FarRight)
+    // Right building: Left Side Visible (NearLeft -> FarLeft)
+    
+    ctx.fillStyle = this.adjustBrightness(f.color, -20);
+    ctx.beginPath();
+    
+    let sideQuad = [];
+    
+    if (f.side === 'left') {
+      sideQuad = [
+        {x: fr, y: yNear}, {x: br, y: yFar},
+        {x: br, y: bt},    {x: fr, y: ft}
+      ];
     } else {
-      ctx.fillRect(x + frontW / 2, y - height, sideW, height);
+      sideQuad = [
+        {x: fl, y: yNear}, {x: bl, y: yFar},
+        {x: bl, y: bt},    {x: fl, y: ft}
+      ];
     }
+    
+    ctx.moveTo(sideQuad[0].x, sideQuad[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(sideQuad[i].x, sideQuad[i].y);
+    ctx.fill();
+    
+    // Windows on Side Wall
+    this.renderWindowGrid(ctx, sideQuad, 5, 4);
 
-    // Draw Front Wall (the "billboard")
-    ctx.fillStyle = building.color;
-    ctx.fillRect(x - frontW / 2, y - height, frontW, height);
-    
-    // Windows on front face only
-    ctx.fillStyle = '#ffeb3b';
-    const windowSize = Math.max(1, 3 * scale);
-    const spacingY = Math.max(4, 8 * scale);
-    const cols = 3;
-    
-    for (let i = 0; i < building.windows; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
+    // Draw Front Face (if visible)
+    if (zNear > 0.5) {
+      ctx.fillStyle = f.color;
+      ctx.fillRect(fl, ft, wNear, hNear);
       
-      const wx = x - frontW / 2 + (col + 0.5) * (frontW / cols);
-      const wy = y - height + (row + 1) * spacingY;
+      // Simple Front Windows
+      ctx.fillStyle = '#ffeb3b';
+      const winW = wNear * 0.2;
+      const winH = winW;
+      const gap = wNear * 0.1;
       
-      // Use building distance for deterministic patterns
-      if (wy < y && Math.abs(wx - x) < frontW / 2 - 1) {
-        const seed = (building.distance * 0.1 + i) % 10;
-        if (seed > 3) {
-          ctx.globalAlpha = 0.5 + Math.sin(building.distance * 0.05 + i) * 0.2;
-          ctx.fillRect(wx - windowSize / 2, wy, windowSize, windowSize);
+      for(let r=0; r<5; r++) {
+        for(let c=0; c<3; c++) {
+           if (Math.random() > 0.4) {
+             ctx.globalAlpha = 0.5 + Math.random() * 0.5;
+             ctx.fillRect(
+               fl + gap + c * (winW + gap),
+               ft + gap + r * (winH + gap * 1.5),
+               winW, winH
+             );
+           }
         }
       }
+      ctx.globalAlpha = 1;
     }
+  }
+
+  adjustBrightness(hex, amount) {
+    const num = parseInt(hex.replace('#',''), 16);
+    let r = (num >> 16) + amount;
+    let b = ((num >> 8) & 0x00FF) + amount;
+    let g = (num & 0x0000FF) + amount;
     
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    
+    return `#${(g | (b << 8) | (r << 16)).toString(16).padStart(6, '0')}`;
+  }
+  
+  renderWindowGrid(ctx, quad, rows, cols) {
+    ctx.fillStyle = '#d4c455';
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (Math.random() > 0.6) continue;
+        
+        const uMin = (c + 0.25) / cols;
+        const uMax = (c + 0.75) / cols;
+        const vMin = (r + 0.2) / rows;
+        const vMax = (r + 0.7) / rows;
+        
+        const p1 = this.bilinearMap(quad, uMin, vMin);
+        const p2 = this.bilinearMap(quad, uMax, vMin);
+        const p3 = this.bilinearMap(quad, uMax, vMax);
+        const p4 = this.bilinearMap(quad, uMin, vMax);
+        
+        ctx.globalAlpha = 0.4 + Math.random() * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.lineTo(p4.x, p4.y);
+        ctx.fill();
+      }
+    }
     ctx.globalAlpha = 1;
+  }
+  
+  bilinearMap(q, u, v) {
+    // q: [BN, BF, TF, TN]
+    // Top Edge (v=0): TN(3) -> TF(2)
+    // Bottom Edge (v=1): BN(0) -> BF(1)
+    
+    const tx = q[3].x + (q[2].x - q[3].x) * u;
+    const ty = q[3].y + (q[2].y - q[3].y) * u;
+    
+    const bx = q[0].x + (q[1].x - q[0].x) * u;
+    const by = q[0].y + (q[1].y - q[0].y) * u;
+    
+    return {
+      x: tx + (bx - tx) * v,
+      y: ty + (by - ty) * v
+    };
   }
   
   renderFence(ctx, x, y, scale, fence) {
