@@ -1,7 +1,20 @@
 import * as CONST from './constants.js';
+import { noise } from './utils.js';
 
 export class Renderer {
   constructor() {
+    // Generate unique hill characteristics for this session
+    this.hillParams = {
+      baseHeight: 40 + Math.random() * 80,
+      seed: Math.random() * 1000,
+      octaves: [
+        { f: 0.3 + Math.random() * 0.7, a: 0.6 + Math.random() * 0.4 }, // Large hills
+        { f: 1.5 + Math.random() * 2.5, a: 0.2 + Math.random() * 0.3 }, // Lumpy features
+        { f: 6.0 + Math.random() * 10.0, a: 0.05 + Math.random() * 0.1 }, // Bumpy terrain
+        { f: 25.0 + Math.random() * 35.0, a: 0.02 + Math.random() * 0.03 } // Fine noise
+      ]
+    };
+
     this.skyCanvas = document.getElementById('sky-layer');
     this.envCanvas = document.getElementById('environment-layer');
     this.roadCanvas = document.getElementById('road-layer');
@@ -74,28 +87,36 @@ export class Renderer {
     ctx.fillStyle = biome.groundColor;
     ctx.beginPath();
     ctx.moveTo(0, h);
-    
-    const hillScale = 0.5;
-    const hillHeight = 60;
-    
+
+    const fovScale = 0.8; // How much of the 360 view we see
+    const baseH = this.hillParams.baseHeight;
+    const seed = this.hillParams.seed;
+
     for (let x = 0; x <= w; x += 5) {
-      const angle = heading + (x / w) * hillScale;
-      // Multi-layered noise for hills
-      const h1 = Math.sin(angle * 2.0) * hillHeight * 0.5;
-      const h2 = Math.sin(angle * 5.7) * hillHeight * 0.2;
-      const h3 = (Math.sin(angle * 12.0) > 0.9 ? 1 : 0) * hillHeight * 0.1; // Sudden perturbations
+      // Map screen X and heading to a world-space angle/position
+      // We want heading to scroll the landscape
+      const worldPos = heading + (x / w) * fovScale;
+
+      let totalH = 0;
+      this.hillParams.octaves.forEach(oct => {
+        // Use the persistent noise function for smoothness and determinism
+        totalH += (noise(worldPos * oct.f + seed) * 0.5 + 0.5) * baseH * oct.a;
+      });
+
+      // Add occasional "abrupt" mountain-like spikes using absolute value or powers
+      const mountainEffect = Math.pow(Math.max(0, noise(worldPos * 0.15 + seed * 2)), 3) * baseH * 2;
       
-      const totalH = h1 + h2 + h3;
-      ctx.lineTo(x, horizonY - totalH);
+      ctx.lineTo(x, horizonY - (totalH + mountainEffect));
     }
-    
+
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
-    
-    // Subtle hill outline
+
+    // Subtle hill outline with slight variation
     ctx.strokeStyle = '#000000';
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1;
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
