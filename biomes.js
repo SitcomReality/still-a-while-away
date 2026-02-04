@@ -1,78 +1,96 @@
+import { lerp } from './utils.js';
+
 export class BiomeManager {
   constructor() {
-    this.biomes = {
-      city_night: {
-        type: 'city',
-        timeOfDay: 'night',
-        weather: 'clear',
-        trafficDensity: 1.5,
-        hasStreetlights: true,
-        description: 'City at night'
-      },
-      city_rain: {
-        type: 'city',
-        timeOfDay: 'night',
-        weather: 'rain',
-        trafficDensity: 0.8,
-        hasStreetlights: true,
-        description: 'Rainy city night'
-      },
-      rural_day: {
-        type: 'rural',
-        timeOfDay: 'day',
-        weather: 'clear',
-        trafficDensity: 0.3,
-        hasStreetlights: false,
-        description: 'Rural day'
-      },
-      rural_night: {
-        type: 'rural',
-        timeOfDay: 'night',
-        weather: 'clear',
-        trafficDensity: 0.2,
-        hasStreetlights: false,
-        description: 'Rural night'
-      },
-      sunset: {
-        type: 'rural',
-        timeOfDay: 'sunset',
-        weather: 'clear',
-        trafficDensity: 0.5,
-        hasStreetlights: false,
-        description: 'Sunset drive'
-      },
-      foggy: {
-        type: 'rural',
-        timeOfDay: 'day',
-        weather: 'fog',
-        trafficDensity: 0.4,
-        hasStreetlights: false,
-        description: 'Foggy afternoon'
-      }
-    };
+    // Time is 0.0 to 1.0 (Midnight to Midnight)
+    this.timeValue = 0.8; // Start at evening
+    this.timeScale = 0.005; // Progression speed
     
-    this.current = this.biomes.city_night;
-    this.transitionProgress = 0;
-    this.nextTransition = 30 + Math.random() * 30;
+    this.locations = ['city', 'rural'];
+    this.currentLocation = 'city';
+    this.nextLocationChange = 60 + Math.random() * 60;
+
+    // Define sky/lighting states for time of day
+    this.timeStates = [
+      { time: 0.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 1.0 },
+      { time: 0.2,  name: 'sunrise', colors: ['#1a2a44', '#ff9e6d', '#ffdb99'], ground: '#1a150a', ambient: 0.5, stars: 0.2 },
+      { time: 0.3,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', ambient: 1.0, stars: 0.0 },
+      { time: 0.7,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', ambient: 1.0, stars: 0.0 },
+      { time: 0.8,  name: 'sunset',  colors: ['#0f1419', '#d87855', '#ffa563'], ground: '#1a1005', ambient: 0.6, stars: 0.1 },
+      { time: 0.9,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 0.8 },
+      { time: 1.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 1.0 }
+    ];
+
+    this.current = this.getInterpolatedState();
   }
   
-  update(dt, time) {
-    this.nextTransition -= dt;
+  update(dt) {
+    // Update time
+    this.timeValue = (this.timeValue + this.timeScale * dt) % 1.0;
     
-    if (this.nextTransition <= 0) {
-      this.transitionTo(this.getRandomBiome());
-      this.nextTransition = 40 + Math.random() * 40;
+    // Update location
+    this.nextLocationChange -= dt;
+    if (this.nextLocationChange <= 0) {
+      this.currentLocation = this.locations[Math.floor(Math.random() * this.locations.length)];
+      this.nextLocationChange = 60 + Math.random() * 60;
     }
+
+    // Refresh state
+    this.current = this.getInterpolatedState();
+  }
+
+  getInterpolatedState() {
+    let s1 = this.timeStates[0];
+    let s2 = this.timeStates[this.timeStates.length - 1];
+
+    for (let i = 0; i < this.timeStates.length - 1; i++) {
+      if (this.timeValue >= this.timeStates[i].time && this.timeValue <= this.timeStates[i+1].time) {
+        s1 = this.timeStates[i];
+        s2 = this.timeStates[i+1];
+        break;
+      }
+    }
+
+    const t = (this.timeValue - s1.time) / (s2.time - s1.time);
+    
+    // Interpolate colors manually for simple hex transition
+    const lerpColor = (c1, c2, t) => {
+      const r1 = parseInt(c1.substring(1, 3), 16);
+      const g1 = parseInt(c1.substring(3, 5), 16);
+      const b1 = parseInt(c1.substring(5, 7), 16);
+      const r2 = parseInt(c2.substring(1, 3), 16);
+      const g2 = parseInt(c2.substring(3, 5), 16);
+      const b2 = parseInt(c2.substring(5, 7), 16);
+      const r = Math.round(lerp(r1, r2, t)).toString(16).padStart(2, '0');
+      const g = Math.round(lerp(g1, g2, t)).toString(16).padStart(2, '0');
+      const b = Math.round(lerp(b1, b2, t)).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`;
+    };
+
+    const colors = s1.colors.map((c, i) => lerpColor(c, s2.colors[i] || s2.colors[s2.colors.length-1], t));
+    
+    return {
+      type: this.currentLocation,
+      timeValue: this.timeValue,
+      name: t < 0.5 ? s1.name : s2.name,
+      skyColors: colors,
+      groundColor: lerpColor(s1.ground, s2.ground, t),
+      ambient: lerp(s1.ambient, s2.ambient, t),
+      stars: lerp(s1.stars, s2.stars, t),
+      weather: 'clear', // Dynamic weather could be added here
+      trafficDensity: this.currentLocation === 'city' ? 1.5 : 0.4,
+      hasStreetlights: this.currentLocation === 'city' || s1.name === 'night' || s2.name === 'night',
+      description: `${this.currentLocation} at ${s1.name}`
+    };
   }
   
   transitionTo(biome) {
-    this.current = biome;
-    console.log(`Transitioning to: ${biome.description}`);
+    // Kept for compatibility, though we use timeValue now
+    console.log(`Setting location to: ${biome.type}`);
+    this.currentLocation = biome.type;
   }
-  
+
   getRandomBiome() {
-    const keys = Object.keys(this.biomes);
-    const key = keys[Math.floor(Math.random() * keys.length)];
-    return this.biomes[key];
+    return { type: this.locations[Math.floor(Math.random() * this.locations.length)] };
   }
 }

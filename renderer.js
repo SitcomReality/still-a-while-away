@@ -102,50 +102,31 @@ export class Renderer {
   
   renderSky(ctx, w, h, biome, time, horizonY) {
     // Sky Gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    const gradient = ctx.createLinearGradient(0, 0, 0, horizonY);
     
-    if (biome.timeOfDay === 'day') {
-      gradient.addColorStop(0, '#6ba3d4');
-      gradient.addColorStop(0.5, '#a8c8e1');
-      gradient.addColorStop(1, '#d4e5f0');
-    } else if (biome.timeOfDay === 'sunset') {
-      gradient.addColorStop(0, '#0f1419');
-      gradient.addColorStop(0.3, '#3d2742');
-      gradient.addColorStop(0.5, '#8b4367');
-      gradient.addColorStop(0.7, '#d87855');
-      gradient.addColorStop(1, '#ffa563');
-    } else {
-      gradient.addColorStop(0, '#050510');
-      gradient.addColorStop(0.5, '#0a0a1f');
-      gradient.addColorStop(1, '#141428');
-    }
+    const colors = biome.skyColors || ['#000', '#111', '#222'];
+    colors.forEach((color, i) => {
+      gradient.addColorStop(i / (colors.length - 1), color);
+    });
     
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, 0, w, horizonY);
     
     // Ground Plane
-    let groundColor;
-    if (biome.type === 'city') {
-        groundColor = '#050508'; // Dark city ground
-    } else if (biome.timeOfDay === 'day') {
-        groundColor = '#1a2a1a'; // Day grass
-    } else {
-        groundColor = '#050a05'; // Night grass
-    }
-    
-    ctx.fillStyle = groundColor;
-    ctx.fillRect(0, horizonY - 2, w, h - horizonY + 2);
+    ctx.fillStyle = biome.groundColor;
+    ctx.fillRect(0, horizonY - 1, w, h - horizonY + 1);
 
-    if (biome.timeOfDay === 'night') {
+    // Stars
+    if (biome.stars > 0.01) {
       ctx.fillStyle = '#ffffff';
-      const starSeed = Math.floor(time / 10);
-      for (let i = 0; i < 120; i++) {
+      const starSeed = 42; 
+      for (let i = 0; i < 150; i++) {
         const x = (Math.sin(i * 12.9898 + starSeed) * 43758.5453) % 1;
         const y = (Math.sin(i * 78.233 + starSeed) * 43758.5453) % 1;
-        const brightness = (Math.sin(time * 2 + i) * 0.5 + 0.5) * 0.4 + 0.3;
-        const size = Math.random() > 0.9 ? 2 : 1;
-        ctx.globalAlpha = brightness;
-        ctx.fillRect(Math.abs(x) * w, Math.abs(y) * h * 0.45, size, size);
+        const twinkle = (Math.sin(time * 1.5 + i) * 0.5 + 0.5);
+        ctx.globalAlpha = biome.stars * twinkle * 0.8;
+        const size = (i % 5 === 0) ? 2 : 1;
+        ctx.fillRect(Math.abs(x) * w, Math.abs(y) * horizonY, size, size);
       }
       ctx.globalAlpha = 1;
     }
