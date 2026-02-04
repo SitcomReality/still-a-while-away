@@ -1,3 +1,5 @@
+import * as CONST from './constants.js';
+
 export class Renderer {
   constructor() {
     this.skyCanvas = document.getElementById('sky-layer');
