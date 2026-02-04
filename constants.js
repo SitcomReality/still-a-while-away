@@ -15,9 +15,9 @@ export const HORIZON_BASE_Y = 0.25;   // Base vertical position of horizon (0-1)
 export const HORIZON_SLOPE_FACTOR = 0.1; // Influence of road slope on horizon position
 
 // Curvature and Slope (Noise Parameters)
-export const CURVE_NOISE_FREQ = 0.01;
-export const CURVE_NOISE_AMP = 0.1;
-export const SLOPE_NOISE_FREQ = 0.008;
+export const CURVE_NOISE_FREQ = 0.005;
+export const CURVE_NOISE_AMP = 0.08;
+export const SLOPE_NOISE_FREQ = 0.05;
 export const SLOPE_NOISE_AMP = 0.15;
 
 // Road Markings
