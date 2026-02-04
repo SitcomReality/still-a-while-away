@@ -7,7 +7,7 @@ export class RoadSystem {
     this.slope = 0;
     this.targetSlope = 0;
     this.distance = 0;
-    this.speed = 10; // meters per second
+    this.speed = 30; // meters per second
     
     this.roadWidth = 0.6; // as fraction of screen width
     this.markings = [];
@@ -21,7 +21,7 @@ export class RoadSystem {
   
   initMarkings() {
     // Pre-generate road markings
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 50; i++) {
       this.markings.push({
         distance: i * 8,
         type: 'dash',
@@ -60,33 +60,40 @@ export class RoadSystem {
 
   getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
-    const maxDist = 300; 
     
-    // Non-linear projection (Quadratic curve) 
-    // This creates a stronger sense of depth where distant objects appear smaller/slower
-    const progress = Math.min(1, Math.max(0, distance / maxDist));
-    const scale = Math.pow(1 - progress, 2);
+    // Perspective-correct projection: y is proportional to 1/z
+    // We want distance 0 to be at the bottom of the screen (progress 1)
+    // and infinite distance to be at the horizon (progress 0)
+    const k = 20; // Perspective depth constant
+    const progress = k / (distance + k);
     
     // Y Position
-    const y = horizon + (screenH - horizon) * scale;
+    const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
-    const curve = this.getCurveAt(distance);
-    // Apply scale to curve offset so road converges to vanishing point
-    const centerX = screenW/2 + curve * screenW * 0.5 * scale;
+    // We anchor the road center at the bottom of the screen (distance 0)
+    // and let the curve develop towards the horizon.
+    const currentCurve = this.getCurveAt(0);
+    const targetCurve = this.getCurveAt(distance);
     
+    // Vanishing point shift based on relative curvature
+    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
+    const centerX = screenW/2 + curveOffset * (1 - progress);
+    
+    // Scale factor for objects (objects get smaller as they move towards horizon)
+    const scale = progress;
+
     return {
       x: centerX,
       y: y,
       scale: scale,
-      horizon,
-      curve
+      horizon
     };
   }
 
   render(ctx, w, h) {
-    const segments = 100;
-    const viewDistance = 300;
+    const segments = 60;
+    const viewDistance = 250;
     
     const horizon = this.getHorizon(h);
     
