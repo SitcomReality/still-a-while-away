@@ -9,7 +9,7 @@ export class RoadSystem {
     this.distance = 0;
     this.speed = 30; // meters per second
     
-    this.roadWidth = 0.6; // as fraction of screen width
+    this.roadWidth = 2.5; // as fraction of screen width
     this.markings = [];
     this.cracks = [];
     
@@ -81,7 +81,7 @@ export class RoadSystem {
     
     // Shift the road center to the right (screenW * 0.18) to simulate 
     // driving in the left lane while keeping the camera centered.
-    const cameraLaneOffset = screenW * 0.18;
+    const cameraLaneOffset = screenW * 0.6;
     const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
     
     // Scale factor for objects (objects get smaller as they move towards horizon)

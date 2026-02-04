@@ -67,10 +67,10 @@ export class TrafficSystem {
       
       // Lane offset (oncoming traffic is in right lane from our perspective)
       // Scale the offset so it stays in the lane
-      const laneOffset = w * 0.15 * scale;
+      const laneOffset = w * 0.6 * scale;
       const x = pos.x + laneOffset;
       
-      const size = 40 * scale;
+      const size = 350 * scale;
       
       // Check if vehicle is turning away (dimming headlights)
       const futureCurve = this.road.getCurveAt(v.distance + 20);
@@ -88,10 +88,10 @@ export class TrafficSystem {
   
   renderHeadlights(ctx, x, y, scale, vehicle, dimFactor) {
     const brightness = vehicle.headlightIntensity * dimFactor;
-    const headlightSpacing = 12 * scale;
+    const headlightSpacing = 100 * scale;
     
-    // Multiple glow layers for depth
-    const glowSizes = [120, 80, 40];
+    // Multiple glow layers for depth (scaled up 10x)
+    const glowSizes = [1200, 800, 400];
     const alphas = [0.15, 0.3, 0.6];
     
     for (let i = 0; i < glowSizes.length; i++) {

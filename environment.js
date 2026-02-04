@@ -35,7 +35,8 @@ export class EnvironmentSystem {
       distance,
       type,
       side: Math.random() > 0.5 ? 'left' : 'right',
-      offset: 0.35 + Math.random() * 0.15,
+      // Much larger offset to clear the wider road (road half-width is ~1.25)
+      offset: 1.4 + Math.random() * 0.6,
       ...this.getFeatureProps(type, biome)
     };
     
@@ -109,17 +110,20 @@ export class EnvironmentSystem {
       
       if (scale <= 0) return;
 
+      // Apply global scale factor for environment details (10x size)
+      const renderScale = scale * 10;
+
       // Render based on type
       if (f.type === 'tree') {
-        this.renderTree(ctx, x, y, scale, f);
+        this.renderTree(ctx, x, y, renderScale, f);
       } else if (f.type === 'lightpole') {
-        this.renderLightpole(ctx, x, y, scale, f);
+        this.renderLightpole(ctx, x, y, renderScale, f);
       } else if (f.type === 'building') {
-        this.renderBuilding(ctx, x, y, scale, f);
+        this.renderBuilding(ctx, x, y, renderScale, f);
       } else if (f.type === 'fence') {
-        this.renderFence(ctx, x, y, scale, f);
+        this.renderFence(ctx, x, y, renderScale, f);
       } else if (f.type === 'bush') {
-        this.renderBush(ctx, x, y, scale, f);
+        this.renderBush(ctx, x, y, renderScale, f);
       }
     });
   }
@@ -157,20 +161,23 @@ export class EnvironmentSystem {
   
   renderLightpole(ctx, x, y, scale, pole) {
     const height = pole.height * scale;
+    const width = Math.max(3, 1.5 * scale); // Scaled width
     
     if (height < 3) return;
     
     // Pole with gradient
-    const poleGradient = ctx.createLinearGradient(x - 2, 0, x + 2, 0);
+    const poleGradient = ctx.createLinearGradient(x - width/2, 0, x + width/2, 0);
     poleGradient.addColorStop(0, '#2a2a2a');
     poleGradient.addColorStop(0.5, '#4a4a4a');
     poleGradient.addColorStop(1, '#2a2a2a');
     ctx.fillStyle = poleGradient;
-    ctx.fillRect(x - 1.5, y, 3, height);
+    ctx.fillRect(x - width/2, y, width, height);
     
     // Light fixture
     ctx.fillStyle = '#5a5a5a';
-    ctx.fillRect(x - 4, y - height, 8, 4);
+    const fixW = width * 3;
+    const fixH = width * 1.5;
+    ctx.fillRect(x - fixW/2, y - height, fixW, fixH);
     
     if (pole.hasLight) {
       // Multiple glow layers
@@ -228,11 +235,12 @@ export class EnvironmentSystem {
   
   renderFence(ctx, x, y, scale, fence) {
     const height = fence.height * scale;
+    const width = Math.max(1, 0.3 * scale);
     if (height < 2) return;
     
     ctx.fillStyle = '#3a3a3a';
     for (let i = 0; i < fence.segments; i++) {
-      ctx.fillRect(x + i * 5 * scale, y, 1, height);
+      ctx.fillRect(x + i * 5 * scale, y, width, height);
     }
   }
   
