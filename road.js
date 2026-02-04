@@ -34,7 +34,7 @@ export class RoadSystem {
     this.distance += this.speed * dt;
     
     // Update curve using noise
-    const curveNoise = noise(this.distance * 0.01 + this.curveNoiseOffset);
+    const curveNoise = noise(this.distance * 0.005 + this.curveNoiseOffset);
     this.targetCurve = curveNoise * 0.3;
     this.curve += (this.targetCurve - this.curve) * dt * 2;
     
@@ -64,27 +64,29 @@ export class RoadSystem {
     // Perspective-correct projection: y is proportional to 1/z
     // We want distance 0 to be at the bottom of the screen (progress 1)
     // and infinite distance to be at the horizon (progress 0)
-    const k = 35; // Increased perspective depth constant to stretch foreground
+    const k = 20; // Perspective depth constant
     const progress = k / (distance + k);
     
     // Y Position
     const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
+    // We anchor the road center at the bottom of the screen (distance 0)
+    // and let the curve develop towards the horizon.
     const currentCurve = this.getCurveAt(0);
     const targetCurve = this.getCurveAt(distance);
     
     // Vanishing point shift based on relative curvature
-    // We increase the multiplier slightly since the power function dampens the curve
-    const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
+    // Reduced multiplier to prevent the road from leaving the screen entirely
+    const curveOffset = (targetCurve - currentCurve) * screenW * 0.8;
     
-    // Shift the road center to the right to simulate driving in the left lane.
+    // Apply curvature with a cubic power function to keep the road straighter near the camera
+    // This simulates the driver looking down the road, keeping the immediate path aligned
+    const curveFactor = Math.pow(1 - progress, 3);
+    
+    // Shift the road center to the right (screenW * 0.6) to simulate 
+    // driving in the left lane while keeping the camera centered.
     const cameraLaneOffset = screenW * 0.6;
-    
-    // Use a cubic power for the curve interpolation. This ensures that for 
-    // small distances (bottom of screen), the curve offset is near zero and 
-    // its rate of change is also near zero, making the road vertical/straight.
-    const curveFactor = Math.pow(1 - progress, 3.0);
     const centerX = screenW/2 + cameraLaneOffset + (curveOffset * curveFactor);
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
