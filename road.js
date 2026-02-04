@@ -78,15 +78,15 @@ export class RoadSystem {
     
     // Vanishing point shift based on relative curvature
     // Reduced multiplier to prevent the road from leaving the screen entirely
-    const curveOffset = (targetCurve - currentCurve) * screenW * 0.5;
+    const curveOffset = (targetCurve - currentCurve) * screenW * 0.25;
     
     // Apply curvature with a higher power function to keep the road straighter for longer
     // This anchors the road at the bottom and only curves it further up the view
-    const curveFactor = Math.pow(1 - progress, 6);
+    const curveFactor = Math.pow(1 - progress, 7);
     
-    // Shift the road center to the right (screenW * 0.6) to simulate 
-    // driving in the left lane while keeping the camera centered.
-    const cameraLaneOffset = screenW * 0.6;
+    // Shift the road center to the right to simulate driving in the left lane
+    // Reduced offset to keep line markings visible
+    const cameraLaneOffset = screenW * 0.35;
     const centerX = screenW/2 + cameraLaneOffset + (curveOffset * curveFactor);
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
