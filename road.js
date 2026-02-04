@@ -151,24 +151,38 @@ export class RoadSystem {
   
   renderMarkings(ctx, w, h) {
     this.markings.forEach(m => {
-      // Use standard projection
       const pos = this.getRoadPosAt(m.distance, w, h);
       
-      if (pos.scale <= 0) return;
+      // We only render if it's in front of us and within a reasonable distance
+      if (pos.scale <= 0 || m.distance > 250) return;
+      
+      // To get the tangent, we look slightly further ahead on the road
+      const delta = 1.0; 
+      const posNext = this.getRoadPosAt(m.distance + delta, w, h);
+      
+      const dx = posNext.x - pos.x;
+      const dy = posNext.y - pos.y;
+      const angle = Math.atan2(dy, dx);
       
       const lineWidth = Math.max(1, 4 * pos.scale);
-      const segmentLength = 25 * pos.scale;
+      const segmentLength = 30 * pos.scale;
+      
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate(angle);
       
       // Marking with slight glow
+      // We draw from 0 (current pos) along the tangent towards the horizon
       ctx.fillStyle = '#f5f5dc';
-      ctx.globalAlpha = 0.9 * Math.min(1, pos.scale + 0.2);
-      ctx.fillRect(pos.x - lineWidth/2, pos.y, lineWidth, segmentLength);
+      ctx.globalAlpha = 0.8 * Math.min(1, pos.scale + 0.3);
+      ctx.fillRect(0, -lineWidth / 2, segmentLength, lineWidth);
       
       // Subtle glow
       ctx.fillStyle = '#fffacd';
-      ctx.globalAlpha = 0.3 * Math.min(1, pos.scale);
-      ctx.fillRect(pos.x - lineWidth/2 - 1, pos.y, lineWidth + 2, segmentLength);
+      ctx.globalAlpha = 0.25 * Math.min(1, pos.scale);
+      ctx.fillRect(0, -lineWidth / 2 - 1, segmentLength, lineWidth + 2);
       
+      ctx.restore();
       ctx.globalAlpha = 1;
     });
   }
