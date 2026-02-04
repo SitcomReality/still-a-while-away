@@ -9,7 +9,7 @@ export class RoadSystem {
     this.distance = 0;
     this.speed = 30; // meters per second
     
-    this.roadWidth = 2.5; // as fraction of screen width
+    this.roadWidth = 2.0; // Scaled so left lane fills the screen width at bottom
     this.markings = [];
     this.cracks = [];
     
@@ -63,44 +63,33 @@ export class RoadSystem {
   getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
     
-    // Perspective-correct projection: y is proportional to 1/z
-    // We want distance 0 to be at the bottom of the screen (progress 1)
-    // and infinite distance to be at the horizon (progress 0)
-    const k = 20; // Perspective depth constant
-    const progress = k / (distance + k);
+    // Perspective-correct projection
+    const k = 20; 
+    const progress = k / (distance + k); // 1 at bottom, 0 at horizon
+    
+    // Scale factor for objects
+    const scale = progress;
+
+    // Weight curvature and slope so they only start "halfway up" the visual field
+    // Halfway up the landscape (which is 75% of screen) is around progress 0.6-0.7
+    const curveWeight = Math.pow(Math.max(0, (0.7 - progress) / 0.7), 2);
+    
+    const targetCurve = this.getCurveAt(distance);
+    const targetSlope = this.getSlopeAt(distance);
+
+    // X Position (Curve)
+    // Shift the road center to the right edge (screenW * 0.5) to simulate 
+    // driving in the left lane where the center divider is at the right edge of the screen.
+    const cameraLaneOffset = screenW * 0.5;
+    const curveOffset = targetCurve * screenW * 3.0 * curveWeight;
+    const centerX = screenW * 0.5 + cameraLaneOffset + curveOffset;
     
     // Y Position
-    const y = horizon + (screenH - horizon) * progress;
-    
-    // X Position (Curve)
-    // We anchor the road center at the bottom of the screen (distance 0)
-    // and let the curve develop towards the horizon, but only start curving
-    // after the halfway point in perspective so the near/mid view stays straight.
-    const currentCurve = this.getCurveAt(0);
-    const targetCurve = this.getCurveAt(distance);
-    
-    // Create a curve influence factor that is 0 for the nearest half of the view
-    // and smoothly ramps to 1 at the horizon (progress from 0.5 -> 1.0).
-    const rampStart = 0.5;
-    // progress ranges [0..1]; we want a factor that's 0 when progress < rampStart,
-    // then linearly grows to 1 when progress == 1. Use a smoothstep-like ease.
-    let curveFactor = 0;
-    if (progress > rampStart) {
-      const t = (progress - rampStart) / (1 - rampStart);
-      // smoothstep easing for a gentler transition
-      curveFactor = t * t * (3 - 2 * t);
-    }
-    
-    // Vanishing point shift based on relative curvature, scaled by curveFactor.
-    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5 * curveFactor;
-    
-    // Shift the road center to the right (screenW * 0.6) to simulate 
-    // driving in the left lane while keeping the camera centered.
-    const cameraLaneOffset = screenW * 0.6;
-    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
-    
-    // Scale factor for objects (objects get smaller as they move towards horizon)
-    const scale = progress;
+    // Base perspective Y
+    const yBase = horizon + (screenH - horizon) * progress;
+    // Add vertical "slope" bending in the distance
+    const ySlopeOffset = targetSlope * screenH * 0.4 * curveWeight;
+    const y = yBase + ySlopeOffset;
 
     return {
       x: centerX,
@@ -117,7 +106,6 @@ export class RoadSystem {
     const horizon = this.getHorizon(h);
     
     // Build road geometry strips
-    // We calculate the left and right edge points for each segment
     const points = [];
     
     for (let i = 0; i <= segments; i++) {
@@ -125,10 +113,9 @@ export class RoadSystem {
         const dist = progress * viewDistance;
         const pos = this.getRoadPosAt(dist, w, h);
         
-        // Road width tapers into distance
-        const baseWidth = w * this.roadWidth; // Width at bottom
-        const topWidth = w * 0.02; // Width at horizon (very narrow)
-        const currentWidth = baseWidth * pos.scale + topWidth * (1 - pos.scale);
+        // Road width tapers into distance correctly with scale
+        const baseWidth = w * this.roadWidth;
+        const currentWidth = baseWidth * pos.scale;
         
         points.push({
             x: pos.x,
