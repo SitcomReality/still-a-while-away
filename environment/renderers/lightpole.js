@@ -15,7 +15,7 @@ export function renderLightpole(ctx, x, y, scale, pole) {
   ctx.fillRect(x - fixW/2, y - height, fixW, fixH);
   
   if (pole.hasLight) {
-    const glowSizes = [80, 50, 25];
+    const glowSizes = [40, 25, 12.5];
     const alphas = ['40', '50', '80'];
     
     glowSizes.forEach((size, i) => {
