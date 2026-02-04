@@ -64,25 +64,28 @@ export class RoadSystem {
     // Perspective-correct projection: y is proportional to 1/z
     // We want distance 0 to be at the bottom of the screen (progress 1)
     // and infinite distance to be at the horizon (progress 0)
-    const k = 20; // Perspective depth constant
+    const k = 35; // Increased perspective depth constant to stretch foreground
     const progress = k / (distance + k);
     
     // Y Position
     const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
-    // We anchor the road center at the bottom of the screen (distance 0)
-    // and let the curve develop towards the horizon.
     const currentCurve = this.getCurveAt(0);
     const targetCurve = this.getCurveAt(distance);
     
     // Vanishing point shift based on relative curvature
-    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
+    // We increase the multiplier slightly since the power function dampens the curve
+    const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
     
-    // Shift the road center to the right (screenW * 0.18) to simulate 
-    // driving in the left lane while keeping the camera centered.
+    // Shift the road center to the right to simulate driving in the left lane.
     const cameraLaneOffset = screenW * 0.6;
-    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
+    
+    // Use a cubic power for the curve interpolation. This ensures that for 
+    // small distances (bottom of screen), the curve offset is near zero and 
+    // its rate of change is also near zero, making the road vertical/straight.
+    const curveFactor = Math.pow(1 - progress, 3.0);
+    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * curveFactor);
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
