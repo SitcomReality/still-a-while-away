@@ -8,7 +8,7 @@ export class EnvironmentSystem {
   }
   
   update(dt, biome) {
-    const viewDistance = 200;
+    const viewDistance = 300;
     
     // Spawn features ahead
     while (this.nextFeatureDistance < this.road.distance + viewDistance) {
@@ -55,33 +55,33 @@ export class EnvironmentSystem {
   getFeatureProps(type, biome) {
     if (type === 'tree') {
       return {
-        height: 15 + Math.random() * 25,
-        width: 8 + Math.random() * 8,
+        height: 50 + Math.random() * 50,
+        width: 20 + Math.random() * 20,
         color: biome.type === 'rural' ? '#1a3a1a' : '#2a4a2a',
         swayPhase: Math.random() * Math.PI * 2
       };
     } else if (type === 'lightpole') {
       return {
-        height: 25,
+        height: 60,
         hasLight: true,
         lightColor: '#fff8e1'
       };
     } else if (type === 'building') {
       return {
-        height: 30 + Math.random() * 40,
-        width: 20 + Math.random() * 30,
-        windows: Math.floor(Math.random() * 8) + 2,
+        height: 80 + Math.random() * 80,
+        width: 60 + Math.random() * 60,
+        windows: Math.floor(Math.random() * 12) + 4,
         color: '#1a1a2a'
       };
     } else if (type === 'fence') {
       return {
-        height: 5,
+        height: 12,
         segments: 5
       };
     } else if (type === 'bush') {
       return {
-        height: 5 + Math.random() * 5,
-        width: 8 + Math.random() * 8,
+        height: 15 + Math.random() * 10,
+        width: 20 + Math.random() * 15,
         color: '#1a2a1a'
       };
     }
@@ -94,7 +94,7 @@ export class EnvironmentSystem {
     
     sorted.forEach(f => {
       const relDist = f.distance - this.road.distance;
-      if (relDist < 5 || relDist > 200) return; // Clip extremely close objects to prevent giant glitches
+      if (relDist < 5 || relDist > 300) return;
       
       const pos = this.road.getRoadPosAt(relDist, w, h);
       

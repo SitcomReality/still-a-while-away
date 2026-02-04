@@ -7,7 +7,7 @@ export class RoadSystem {
     this.slope = 0;
     this.targetSlope = 0;
     this.distance = 0;
-    this.speed = 30; // meters per second
+    this.speed = 10; // meters per second
     
     this.roadWidth = 0.6; // as fraction of screen width
     this.markings = [];
@@ -21,7 +21,7 @@ export class RoadSystem {
   
   initMarkings() {
     // Pre-generate road markings
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 80; i++) {
       this.markings.push({
         distance: i * 8,
         type: 'dash',
@@ -59,41 +59,34 @@ export class RoadSystem {
   }
 
   getRoadPosAt(distance, screenW, screenH) {
-    // Consistent projection math for all entities
     const horizon = this.getHorizon(screenH);
-    const maxDist = 200; // max view distance for projection calc
+    const maxDist = 300; 
     
-    // Normalized distance (0 at car, 1 at horizon)
-    // We use a linear progression for Y to match the legacy look, 
-    // but the X curve logic needs to be consistent.
-    const progress = Math.min(1, Math.max(0, distance / 150));
+    // Non-linear projection (Quadratic curve) 
+    // This creates a stronger sense of depth where distant objects appear smaller/slower
+    const progress = Math.min(1, Math.max(0, distance / maxDist));
+    const scale = Math.pow(1 - progress, 2);
     
     // Y Position
-    const y = horizon + (screenH - horizon) * (1 - progress);
+    const y = horizon + (screenH - horizon) * scale;
     
     // X Position (Curve)
-    // The curve value is the road's lateral offset at that specific distance
     const curve = this.getCurveAt(distance);
-    // Apply perspective factor to the curve offset: (1 - progress)
-    // This makes the road converge to center at horizon (if curve is 0)
-    // or converge to the vanishing point offset by curve.
-    const centerX = screenW/2 + curve * screenW * 0.3 * (1 - progress);
+    // Apply scale to curve offset so road converges to vanishing point
+    const centerX = screenW/2 + curve * screenW * 0.5 * scale;
     
-    // Width scale for objects at this distance
-    const scale = (1 - progress);
-
     return {
-      x: centerX, // center of road at this distance
-      y: y,       // vertical screen pos
-      scale: scale, // approximate scale factor
+      x: centerX,
+      y: y,
+      scale: scale,
       horizon,
       curve
     };
   }
 
   render(ctx, w, h) {
-    const segments = 60;
-    const viewDistance = 150;
+    const segments = 100;
+    const viewDistance = 300;
     
     const horizon = this.getHorizon(h);
     

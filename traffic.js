@@ -35,7 +35,7 @@ export class TrafficSystem {
     const type = types[Math.floor(Math.random() * types.length)];
     
     const vehicle = {
-      distance: 150 + Math.random() * 50,
+      distance: 300 + Math.random() * 50,
       speed: 25 + Math.random() * 15,
       type,
       lane: 'right',
