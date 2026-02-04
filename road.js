@@ -9,7 +9,7 @@ export class RoadSystem {
     this.distance = 0;
     this.speed = 30; // meters per second
     
-    this.roadWidth = 2.2; // as fraction of screen width
+    this.roadWidth = 2.0; // as fraction of screen width
     this.markings = [];
     this.cracks = [];
     
@@ -69,25 +69,29 @@ export class RoadSystem {
     const k = 20; 
     const progress = k / (distance + k);
     
-    // Y Position
+    // Y Position mapped to the 3/4 landscape height
     const y = horizon + (screenH - horizon) * progress;
     
-    // Camera is in the left lane. 
-    // Shift road center to the right so camera (screen center) is in left lane.
-    const cameraLaneOffset = screenW * 0.6;
+    // VANISHING POINT AND BOTTOM ANCHOR
+    // Vanishing point at horizon is screen center (0.5w).
+    // Divider at bottom is near the bottom-right corner (0.98w).
+    // This makes exactly one lane width (left lane) fill the screen width.
+    const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
     
-    let centerX;
-    if (progress > 0.5) {
-      // BOTTOM HALF OF SCREEN: STRAIGHT, NO CURVE
-      centerX = screenW / 2 + cameraLaneOffset;
-    } else {
-      // TOP HALF OF SCREEN: Apply curvature
+    let centerX = straightX;
+    
+    // HORIZONTAL CURVATURE
+    // Only apply curvature in the distance (upper half of landscape).
+    // 'progress' 1.0 is the camera, 0.0 is the horizon.
+    if (progress < 0.5) {
+      // Smoothly blend curve in as we look further ahead
+      const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
       const currentCurve = this.getCurveAt(0);
       const targetCurve = this.getCurveAt(distance);
-      const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
       
-      const curveFade = 1 - (progress / 0.5);
-      centerX = screenW / 2 + cameraLaneOffset + (curveOffset * curveFade);
+      // Scale curve offset by screen width
+      const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
+      centerX += curveOffset * curveFade;
     }
     
     return {
@@ -99,8 +103,8 @@ export class RoadSystem {
   }
 
   render(ctx, w, h) {
-    const segments = 60;
-    const viewDistance = 250;
+    const segments = 70;
+    const viewDistance = 350;
     
     const horizon = this.getHorizon(h);
     

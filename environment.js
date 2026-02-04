@@ -35,8 +35,8 @@ export class EnvironmentSystem {
       distance,
       type,
       side: Math.random() > 0.5 ? 'left' : 'right',
-      // Much larger offset to clear the wider road (road half-width is ~1.25)
-      offset: 1.4 + Math.random() * 0.6,
+      // Offset relative to road center (divider). Road half-width is 1.0.
+      offset: 1.1 + Math.random() * 0.8,
       ...this.getFeatureProps(type, biome)
     };
     

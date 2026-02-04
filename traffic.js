@@ -21,10 +21,13 @@ export class TrafficSystem {
     // Update existing vehicles
     for (let i = this.vehicles.length - 1; i >= 0; i--) {
       const v = this.vehicles[i];
-      v.distance -= (this.road.speed + v.speed) * dt;
+      // Oncoming traffic (right lane) moves towards us.
+      // Same-direction traffic (left lane) moves relative to our speed.
+      const relSpeed = v.lane === 'right' ? (this.road.speed + v.speed) : (this.road.speed - v.speed);
+      v.distance -= relSpeed * dt;
       
-      // Remove vehicles that passed us
-      if (v.distance < -5) {
+      // Remove vehicles that passed us or got too far ahead
+      if (v.distance < -10 || v.distance > 500) {
         this.vehicles.splice(i, 1);
       }
     }
@@ -35,10 +38,11 @@ export class TrafficSystem {
     const type = types[Math.floor(Math.random() * types.length)];
     
     const vehicle = {
-      distance: 200 + Math.random() * 100,
-      speed: 25 + Math.random() * 15,
+      distance: 250 + Math.random() * 150,
+      speed: 20 + Math.random() * 20,
       type,
-      lane: 'right',
+      // Oncoming traffic in right lane, occasional traffic in our lane
+      lane: Math.random() > 0.3 ? 'right' : 'left',
       color: this.getRandomColor(),
       headlightColor: Math.random() > 0.7 ? '#a8d8ff' : '#fff8e1',
       headlightIntensity: 0.8 + Math.random() * 0.4,
@@ -65,11 +69,10 @@ export class TrafficSystem {
       const y = pos.y;
       const scale = pos.scale;
       
-      // Oncoming traffic is in the right lane.
-      // In our 2-lane model, road center is the divider.
-      // Right lane center is roughly 1/4 road width to the right of road center.
+      // Calculate lane offset relative to the divider (pos.x)
       const currentRoadWidth = w * this.road.roadWidth * scale;
-      const laneOffset = currentRoadWidth * 0.25;
+      // roadWidth 2.0 means 1.0 per lane. Offset is 0.25 of total width to hit lane centers.
+      const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
       const x = pos.x + laneOffset;
       
       const size = 350 * scale;
