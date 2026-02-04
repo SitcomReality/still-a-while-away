@@ -73,18 +73,18 @@ export class RoadSystem {
     const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
-    // We anchor the road center at the bottom of the screen (distance 0)
-    // and let the curve develop towards the horizon.
+    // Keep a straight section close to the camera, then let the curve
+    // progressively influence the vanishing point further into the distance.
     const currentCurve = this.getCurveAt(0);
     const targetCurve = this.getCurveAt(distance);
     
     // Vanishing point shift based on relative curvature
-    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
+    const curveOffset = (targetCurve - currentCurve) * screenW * 1.2;
     
-    // Shift the road center to the right (screenW * 0.18) to simulate 
-    // driving in the left lane while keeping the camera centered.
-    const cameraLaneOffset = screenW * 0.6;
-    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
+    // Shift the road center slightly to the right so we're in the left lane,
+    // but keep the center line visible and heading toward the bottom-right.
+    const cameraLaneOffset = screenW * 0.48;
+    const centerX = screenW / 2 + cameraLaneOffset + (curveOffset * (1 - progress));
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
@@ -204,8 +204,26 @@ export class RoadSystem {
   }
   
   getCurveAt(distance) {
+    // Base curvature from noise, in world space
     const d = this.distance + distance;
-    return noise(d * 0.01 + this.curveNoiseOffset) * 0.3;
+    const baseCurve = noise(d * 0.01 + this.curveNoiseOffset) * 0.3;
+
+    // Fade in curvature with distance so the near section of road
+    // is always straight and the bend develops further ahead.
+    const straightLength = 60; // completely straight up to this distance
+    const fadeLength = 80;     // distance over which curvature ramps in
+    const local = Math.max(0, distance);
+    
+    let t;
+    if (local <= straightLength) {
+      t = 0;
+    } else if (local >= straightLength + fadeLength) {
+      t = 1;
+    } else {
+      t = (local - straightLength) / fadeLength;
+    }
+
+    return baseCurve * t;
   }
   
   getSlopeAt(distance) {
