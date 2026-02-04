@@ -32,13 +32,19 @@ export class EnvironmentSystem {
     const types = this.getFeatureTypes(biome);
     const type = types[Math.floor(Math.random() * types.length)];
     
+    const props = this.getFeatureProps(type, biome);
+    // Calculate a safe offset to prevent road clipping. 
+    // Road half-width is 1.1. We add a buffer based on typical object widths.
+    let baseOffset = 1.3;
+    if (type === 'building') baseOffset = 1.8;
+    if (type === 'tree') baseOffset = 1.4;
+
     const feature = {
       distance,
       type,
       side: Math.random() > 0.5 ? 'left' : 'right',
-      // Offset relative to road center (divider). Road half-width is 1.0.
-      offset: 1.1 + Math.random() * 0.8,
-      ...this.getFeatureProps(type, biome)
+      offset: baseOffset + Math.random() * 1.0,
+      ...props
     };
     
     this.features.push(feature);
@@ -48,7 +54,7 @@ export class EnvironmentSystem {
     if (biome.type === 'city') {
       return ['lightpole', 'lightpole', 'building', 'tree'];
     } else if (biome.type === 'rural') {
-      return ['tree', 'tree', 'tree', 'fence'];
+      return ['tree', 'tree', 'tree', 'bush'];
     } else {
       return ['tree', 'tree', 'bush'];
     }
@@ -131,29 +137,15 @@ export class EnvironmentSystem {
     
     if (height < 2) return;
     
-    // Trunk with gradient (anchor at base y)
-    const trunkGradient = ctx.createLinearGradient(x - width * 0.15, 0, x + width * 0.15, 0);
-    trunkGradient.addColorStop(0, '#1a1510');
-    trunkGradient.addColorStop(0.5, '#2a2218');
-    trunkGradient.addColorStop(1, '#1a1510');
-    ctx.fillStyle = trunkGradient;
+    // Solid trunk
+    ctx.fillStyle = '#2a2218';
     ctx.fillRect(x - width * 0.15, y - height * 0.4, width * 0.3, height * 0.4);
     
-    // Foliage layers centered higher up
-    ctx.globalAlpha = 0.9;
+    // Opaque, solid color foliage
     ctx.fillStyle = tree.color;
     ctx.beginPath();
     ctx.ellipse(x, y - height * 0.7, width * 0.5, height * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Darker layer for depth
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = '#0a1a0a';
-    ctx.beginPath();
-    ctx.ellipse(x - width * 0.2, y - height * 0.75, width * 0.3, height * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.globalAlpha = 1;
   }
   
   renderLightpole(ctx, x, y, scale, pole) {
@@ -162,12 +154,8 @@ export class EnvironmentSystem {
     
     if (height < 3) return;
     
-    // Pole with gradient (anchor at base y)
-    const poleGradient = ctx.createLinearGradient(x - width/2, 0, x + width/2, 0);
-    poleGradient.addColorStop(0, '#2a2a2a');
-    poleGradient.addColorStop(0.5, '#4a4a4a');
-    poleGradient.addColorStop(1, '#2a2a2a');
-    ctx.fillStyle = poleGradient;
+    // Solid color pole
+    ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(x - width/2, y - height, width, height);
     
     // Light fixture
@@ -231,14 +219,7 @@ export class EnvironmentSystem {
   }
   
   renderFence(ctx, x, y, scale, fence) {
-    const height = fence.height * scale;
-    const width = Math.max(1, 0.3 * scale);
-    if (height < 2) return;
-    
-    ctx.fillStyle = '#3a3a3a';
-    for (let i = 0; i < fence.segments; i++) {
-      ctx.fillRect(x + i * 5 * scale, y - height, width, height);
-    }
+    // Fences removed from gameplay
   }
   
   renderBush(ctx, x, y, scale, bush) {
