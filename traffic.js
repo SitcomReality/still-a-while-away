@@ -87,18 +87,34 @@ export class TrafficSystem {
       const height = size * 0.7 * v.height;
       const currentRoadWidth = w * this.road.roadWidth * pos.scale;
       const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
-      const x = pos.x + laneOffset;
+      const baseCenterX = pos.x + laneOffset;
       
-      const q = [
-        { x: x - width/2, y: pos.y, scale: pos.scale },
-        { x: x + width/2, y: pos.y, scale: pos.scale },
-        { x: x + width/2, y: pos.y - height, scale: pos.scale },
-        { x: x - width/2, y: pos.y - height, scale: pos.scale }
-      ];
-
+      // Compute perspective-aware horizontal contraction based on curvature change.
+      // If the vehicle is turning relative to the camera, its forward face should appear
+      // horizontally squashed similar to nearby 3D cars.
       const futureCurve = this.road.getCurveAt(v.distance + 20);
       const currentCurve = this.road.getCurveAt(v.distance);
-      const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
+      const curveDelta = futureCurve - currentCurve;
+      
+      // Shrink factor: larger curve differences -> more horizontal contraction.
+      // Clamp so vehicles don't invert or disappear.
+      const shrink = Math.max(0.3, 1 - Math.abs(curveDelta) * 4.0);
+      
+      // Slight horizontal offset of the front face to simulate rotation direction.
+      const frontOffset = curveDelta * w * 0.25 * pos.scale;
+      
+      const frontCenterX = baseCenterX + frontOffset;
+      const frontWidth = width * shrink;
+      
+      // Build quad with bottom (rear) using full width and top (front) using contracted width & offset.
+      const q = [
+        { x: baseCenterX - width / 2, y: pos.y, scale: pos.scale },                     // bottom-left (rear)
+        { x: baseCenterX + width / 2, y: pos.y, scale: pos.scale },                     // bottom-right (rear)
+        { x: frontCenterX + frontWidth / 2, y: pos.y - height, scale: pos.scale },      // top-right (front face)
+        { x: frontCenterX - frontWidth / 2, y: pos.y - height, scale: pos.scale }       // top-left (front face)
+      ];
+
+      const dimFactor = Math.abs(curveDelta) > 0.05 ? 0.3 : 1.0;
       
       this.renderVehicleSilhouette(ctx, q, v);
       this.renderLights(ctx, q, v, dimFactor);
