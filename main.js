@@ -39,7 +39,7 @@ class Game {
     this.biomes.update(dt, this.time);
     this.road.update(dt, this.biomes.current);
     this.traffic.update(dt, this.biomes.current);
-    this.environment.update(dt, this.biomes.current);
+    this.environment.update(dt, this.biomes.current, this.biomes);
     this.weather.update(dt, this.biomes.current);
     this.windshield.update(dt);
     

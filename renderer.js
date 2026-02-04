@@ -199,6 +199,9 @@ export class Renderer {
     // We use trafficCtx (the topmost world layer) for combined rendering
     this.envCtx.clearRect(0, 0, w, h);
     this.trafficCtx.clearRect(0, 0, w, h);
+
+    // Render distant biome previews first
+    state.environment.renderDistantBiomes(this.trafficCtx, w, h);
     
     const renderables = [];
     

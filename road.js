@@ -55,6 +55,11 @@ export class RoadSystem {
     return h * (CONST.HORIZON_BASE_Y + this.slope * CONST.HORIZON_SLOPE_FACTOR);
   }
 
+  getHorizonAtDistance(distance, screenH) {
+    const slope = this.getSlopeAt(distance);
+    return screenH * (CONST.HORIZON_BASE_Y + slope * CONST.HORIZON_SLOPE_FACTOR);
+  }
+
   getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
     

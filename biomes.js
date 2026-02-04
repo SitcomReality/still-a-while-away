@@ -93,4 +93,44 @@ export class BiomeManager {
   getRandomBiome() {
     return { type: this.locations[Math.floor(Math.random() * this.locations.length)] };
   }
+
+  previewBiomeAt(futureDistance) {
+    // Predict biome type at a future distance based on noise
+    const noiseVal = Math.sin(futureDistance * 0.002 + this.curveNoiseOffset);
+    const biomeType = noiseVal > 0 ? 'city' : 'rural';
+    return { type: biomeType };
+  }
+}
+
+// Helper to store biome preview data
+export class BiomePreview {
+  constructor() {
+    this.zones = [];
+  }
+
+  update(distance, biomeManager) {
+    // Clear old zones
+    this.zones = this.zones.filter(z => z.distance > distance - 100);
+
+    // Generate new preview zones
+    const maxDist = distance + 1200;
+    let checkDist = distance + 400;
+
+    while (checkDist < maxDist) {
+      const existing = this.zones.find(z => Math.abs(z.distance - checkDist) < 50);
+      if (!existing) {
+        const preview = biomeManager.previewBiomeAt(checkDist);
+        this.zones.push({
+          distance: checkDist,
+          type: preview.type,
+          width: 100 + Math.random() * 200
+        });
+      }
+      checkDist += 150 + Math.random() * 100;
+    }
+  }
+
+  getZonesInRange(minDist, maxDist) {
+    return this.zones.filter(z => z.distance >= minDist && z.distance <= maxDist);
+  }
 }

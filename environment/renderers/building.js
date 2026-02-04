@@ -1,7 +1,7 @@
 import * as CONST from '../../constants.js';
 import { adjustBrightness, bilinearMap } from './utils.js';
 
-export function renderBuilding(ctx, w, h, f, road) {
+export function renderBuilding(ctx, w, h, f, road, overrideScale) {
   const relDist = f.distance - road.distance;
   const depth = f.depth || 30;
   
@@ -23,10 +23,11 @@ export function renderBuilding(ctx, w, h, f, road) {
   const cxNear = posNear.x + xOffsetNear;
   const cxFar = posFar.x + xOffsetFar;
   
-  const wNear = f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale;
-  const wFar = f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale;
-  const hNear = f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale;
-  const hFar = f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale;
+  const scaleMultiplier = overrideScale !== undefined ? (overrideScale / (CONST.ENV_GLOBAL_SCALE * posNear.scale)) : 1.0;
+  const wNear = f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale * scaleMultiplier;
+  const wFar = f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale * scaleMultiplier;
+  const hNear = f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale * scaleMultiplier;
+  const hFar = f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale * scaleMultiplier;
   
   const yNear = posNear.y;
   const yFar = posFar.y;
