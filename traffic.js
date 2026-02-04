@@ -121,25 +121,31 @@ export class TrafficSystem {
     ctx.fillStyle = adjustBrightness(v.color, -40);
     ctx.fillRect(fl, ft, wF, hF);
 
-    // Side Surface
+    // Side Surfaces - Only draw if they are facing the camera perspective
     const sideColor = adjustBrightness(v.color, -20);
     ctx.fillStyle = sideColor;
-    ctx.beginPath();
-    // Use xN vs screen center to decide which side is visible
-    if (xN > w * 0.5) { 
-      // Car is to the right of camera, left side is visible
+    
+    // Left side visibility: when the near-left edge is to the right of the far-left edge
+    if (nl > fl) {
+      ctx.beginPath();
       ctx.moveTo(nl, nt); ctx.lineTo(fl, ft); ctx.lineTo(fl, fb); ctx.lineTo(nl, nb);
-    } else { 
-      // Car is to the left of camera, right side is visible
-      ctx.moveTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fr, fb); ctx.lineTo(nr, nb);
+      ctx.fill();
     }
-    ctx.fill();
+    
+    // Right side visibility: when the near-right edge is to the left of the far-right edge
+    if (nr < fr) {
+      ctx.beginPath();
+      ctx.moveTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fr, fb); ctx.lineTo(nr, nb);
+      ctx.fill();
+    }
 
-    // Top Surface (Roof)
-    ctx.fillStyle = adjustBrightness(v.color, 10);
-    ctx.beginPath();
-    ctx.moveTo(nl, nt); ctx.lineTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fl, ft);
-    ctx.fill();
+    // Top Surface (Roof) - visible if the car's near-top is below its far-top (camera looking down)
+    if (nt > ft) {
+      ctx.fillStyle = adjustBrightness(v.color, 10);
+      ctx.beginPath();
+      ctx.moveTo(nl, nt); ctx.lineTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fl, ft);
+      ctx.fill();
+    }
 
     // Near Face (The "billboard" that obscures the rest)
     this.renderVehicleSilhouette(ctx, xN, yN, sizeN, v);
