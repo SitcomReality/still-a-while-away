@@ -161,66 +161,82 @@ export class TrafficSystem {
     const isSameDirection = vehicle.lane === 'left';
     const lightColor = isSameDirection ? '#ff0000' : vehicle.headlightColor;
     const brightness = vehicle.headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0);
-    const lightSpacing = 100 * scale;
-    const height = CONST.TRAFFIC_SIZE_SCALE * 0.7 * vehicle.height * scale;
-    const lightY = y - height * 0.3; // Lights at 30% vehicle height
+    const scale = quad[0].scale;
+
+    // Use bilinear mapping to position lights on the face
+    const lightL = bilinearMap(quad, 0.2, 0.75);
+    const lightR = bilinearMap(quad, 0.8, 0.75);
     
     // Only massive bloom for oncoming headlights
     if (!isSameDirection) {
       const glowSizes = [1200, 800, 400];
       const alphas = [0.15, 0.3, 0.6];
-      for (let i = 0; i < glowSizes.length; i++) {
-        const glowSize = glowSizes[i] * scale * brightness;
-        const gradient = ctx.createRadialGradient(x, lightY, 0, x, lightY, glowSize);
-        const baseAlpha = Math.floor(alphas[i] * brightness * 255).toString(16).padStart(2, '0');
-        gradient.addColorStop(0, lightColor + baseAlpha);
-        gradient.addColorStop(0.4, lightColor + Math.floor(alphas[i] * brightness * 100).toString(16).padStart(2, '0'));
-        gradient.addColorStop(1, lightColor + '00');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(x - glowSize, lightY - glowSize, glowSize * 2, glowSize * 2);
-      }
+      [lightL, lightR].forEach(pt => {
+        for (let i = 0; i < glowSizes.length; i++) {
+          const glowSize = glowSizes[i] * scale * brightness;
+          const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, glowSize);
+          const baseAlpha = Math.floor(alphas[i] * brightness * 255).toString(16).padStart(2, '0');
+          gradient.addColorStop(0, lightColor + baseAlpha);
+          gradient.addColorStop(0.4, lightColor + Math.floor(alphas[i] * brightness * 100).toString(16).padStart(2, '0'));
+          gradient.addColorStop(1, lightColor + '00');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(pt.x - glowSize, pt.y - glowSize, glowSize * 2, glowSize * 2);
+        }
+      });
     } else {
       // Small glow for taillights
       const glowSize = 100 * scale * brightness;
       ctx.fillStyle = lightColor;
       ctx.globalAlpha = 0.3 * brightness;
-      ctx.beginPath(); ctx.arc(x - lightSpacing, lightY, glowSize, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + lightSpacing, lightY, glowSize, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lightL.x, lightL.y, glowSize, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lightR.x, lightR.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
     
     const coreSize = Math.max(2, (isSameDirection ? 6 : 8) * scale);
     ctx.fillStyle = lightColor;
     ctx.globalAlpha = brightness * 0.95;
-    ctx.beginPath(); ctx.arc(x - lightSpacing, lightY, coreSize/2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + lightSpacing, lightY, coreSize/2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lightR.x, lightR.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
   }
   
-  renderVehicleSilhouette(ctx, x, y, size, vehicle) {
+  renderVehicleSilhouette(ctx, quad, vehicle) {
+    const scale = quad[0].scale;
+    const size = CONST.TRAFFIC_SIZE_SCALE * scale;
     if (size < 4) return;
     
-    const width = size * 1.4;
-    const height = size * 0.7 * vehicle.height;
+    const width = Math.abs(quad[1].x - quad[0].x);
+    const centerX = (quad[0].x + quad[1].x) / 2;
     
     // Shadow under car
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x - width/2, y - 2, width, 4);
+    ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
 
-    // Car body (Opaque to prevent seeing back face through it)
+    // Car body (Perspective-correct near face)
     ctx.fillStyle = vehicle.color;
-    ctx.fillRect(x - width/2, y - height, width, height);
+    this.drawQuad(ctx, quad);
     
-    // Windshield / Windows
+    // Windshield / Windows - Mapped within the quad face
     ctx.fillStyle = '#0a0a0f';
-    const windW = width * 0.8;
-    const windH = height * 0.4;
-    ctx.fillRect(x - windW/2, y - height * 0.8, windW, windH);
+    const windQuad = [
+      bilinearMap(quad, 0.1, 0.5),
+      bilinearMap(quad, 0.9, 0.5),
+      bilinearMap(quad, 0.9, 0.1),
+      bilinearMap(quad, 0.1, 0.1)
+    ];
+    this.drawQuad(ctx, windQuad);
     
     // Subtle highlight on roof edge
     ctx.fillStyle = '#ffffff';
     ctx.globalAlpha = 0.1;
-    ctx.fillRect(x - width/2, y - height, width, height * 0.1);
+    const highQuad = [
+      bilinearMap(quad, 0, 0.1),
+      bilinearMap(quad, 1, 0.1),
+      bilinearMap(quad, 1, 0),
+      bilinearMap(quad, 0, 0)
+    ];
+    this.drawQuad(ctx, highQuad);
     
     ctx.globalAlpha = 1;
   }
