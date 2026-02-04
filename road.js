@@ -78,7 +78,11 @@ export class RoadSystem {
     
     // Vanishing point shift based on relative curvature
     const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
-    const centerX = screenW/2 + curveOffset * (1 - progress);
+    
+    // Shift the road center to the right (screenW * 0.18) to simulate 
+    // driving in the left lane while keeping the camera centered.
+    const cameraLaneOffset = screenW * 0.18;
+    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
