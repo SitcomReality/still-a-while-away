@@ -17,14 +17,14 @@ export const HORIZON_SLOPE_FACTOR = 0.1; // Influence of road slope on horizon p
 // Curvature and Slope (Noise Parameters)
 export const CURVE_NOISE_FREQ = 0.005;
 export const CURVE_NOISE_AMP = 0.08;
-export const SLOPE_NOISE_FREQ = 0.05;
-export const SLOPE_NOISE_AMP = 0.15;
+export const SLOPE_NOISE_FREQ = 0.025;
+export const SLOPE_NOISE_AMP = 0.1;
 
 // Road Markings
 export const MARKING_SPACING = 32;     // Distance between dashes
 export const MARKING_BATCH_SIZE = 50; // Pre-generated marking count
-export const MARKING_LENGTH_SCALE = 100; // Length multiplier based on perspective
-export const MARKING_WIDTH_SCALE = 20;   // Width multiplier based on perspective
+export const MARKING_LENGTH_SCALE = 120; // Length multiplier based on perspective
+export const MARKING_WIDTH_SCALE = 40;   // Width multiplier based on perspective
 export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren't drawn
 
 // Environment & World
@@ -38,6 +38,6 @@ export const TRAFFIC_REMOVAL_THRESHOLD = -10;
 export const TRAFFIC_SIZE_SCALE = 350;
 
 // Heading and UI
-export const HEADING_SENSITIVITY = 30.0;
+export const HEADING_SENSITIVITY = 2;
 export const COMPASS_WIDTH = 300;
 export const COMPASS_HEIGHT = 40;
