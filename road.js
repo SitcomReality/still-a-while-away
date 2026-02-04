@@ -9,7 +9,7 @@ export class RoadSystem {
     this.distance = 0;
     this.speed = 30; // meters per second
     
-    this.roadWidth = 2.5; // as fraction of screen width
+    this.roadWidth = 3.2; // as fraction of screen width
     this.markings = [];
     this.cracks = [];
     
@@ -22,10 +22,19 @@ export class RoadSystem {
   initMarkings() {
     // Pre-generate road markings
     for (let i = 0; i < 50; i++) {
+      // Center markings
       this.markings.push({
         distance: i * 8,
         type: 'dash',
-        lane: 'center'
+        lane: 'center',
+        offset: 0
+      });
+      // Right lane edge markings (further right)
+      this.markings.push({
+        distance: i * 8,
+        type: 'dash',
+        lane: 'right',
+        offset: 0.5
       });
     }
   }
@@ -73,29 +82,23 @@ export class RoadSystem {
     const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
-    // We anchor the road center at the bottom of the screen and keep the
-    // lower half of the landscape visually straight (converging to the centre),
-    // only allowing curvature to influence the upper half.
-    const currentCurve = this.getCurveAt(0);
-    const targetCurve = this.getCurveAt(distance);
+    // Only apply curves/slopes to the upper half (progress <= 0.5)
+    // Bottom half stays straight, converging to screen center
+    let centerX;
     
-    // Vanishing point shift based on relative curvature
-    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
-    
-    // Base camera offset: still biased to the left lane, but reduced so that
-    // the lane markings stay in view instead of being pushed off-screen.
-    const cameraLaneOffset = screenW * 0.3;
-    const straightCenterX = screenW / 2 + cameraLaneOffset;
-    
-    // Blend in curvature only in the upper half of the landscape.
-    // progress ~1 at the bottom, ~0 at the horizon.
-    // For progress >= 0.5 (lower half), curveFactor = 0 (no curve).
-    // For progress <= 0.5 (upper half), curveFactor ramps to 1.
-    let curveFactor = (0.5 - progress) / 0.5;
-    if (curveFactor < 0) curveFactor = 0;
-    if (curveFactor > 1) curveFactor = 1;
-    
-    const centerX = straightCenterX + curveOffset * curveFactor;
+    if (progress > 0.5) {
+      // Bottom half: straight convergence to screen center
+      centerX = screenW / 2;
+    } else {
+      // Upper half: apply curves
+      const currentCurve = this.getCurveAt(0);
+      const targetCurve = this.getCurveAt(distance);
+      const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
+      
+      // Fade curve in as we transition from straight to curved
+      const curveFade = 1 - (progress / 0.5); // 0 at progress=0.5, 1 at progress=0
+      centerX = screenW / 2 + (curveOffset * curveFade);
+    }
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
@@ -169,6 +172,11 @@ export class RoadSystem {
       // We only render if it's in front of us and within a reasonable distance
       if (pos.scale <= 0 || m.distance > 250) return;
       
+      // Calculate lane offset
+      const baseWidth = w * this.roadWidth;
+      const currentWidth = baseWidth * pos.scale;
+      const laneOffset = (m.offset || 0) * currentWidth;
+      
       // To get the tangent, we look slightly further ahead on the road
       const delta = 1.0; 
       const posNext = this.getRoadPosAt(m.distance + delta, w, h);
@@ -181,7 +189,7 @@ export class RoadSystem {
       const segmentLength = 30 * pos.scale;
       
       ctx.save();
-      ctx.translate(pos.x, pos.y);
+      ctx.translate(pos.x + laneOffset, pos.y);
       ctx.rotate(angle);
       
       // Marking with slight glow
