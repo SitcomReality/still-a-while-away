@@ -81,8 +81,8 @@ export class TrafficSystem {
         const isTurningAway = Math.abs(futureCurve - currentCurve) > 0.05;
         const dimFactor = isTurningAway ? 0.3 : 1.0;
         
-        this.renderLights(ctx, x, pos.y, pos.scale, v, dimFactor);
         this.renderVehicleSilhouette(ctx, x, pos.y, size, v);
+        this.renderLights(ctx, x, pos.y, pos.scale, v, dimFactor);
       }
     });
   }
@@ -141,14 +141,14 @@ export class TrafficSystem {
     ctx.moveTo(nl, nt); ctx.lineTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fl, ft);
     ctx.fill();
 
+    // Near Face (The "billboard" that obscures the rest)
+    this.renderVehicleSilhouette(ctx, xN, yN, sizeN, v);
+
     // Lights on the relevant face (Near face for oncoming/same-way)
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
     const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
     this.renderLights(ctx, xN, yN, posN.scale, v, dimFactor);
-
-    // Near Face (The "billboard" that obscures the rest)
-    this.renderVehicleSilhouette(ctx, xN, yN, sizeN, v);
   }
 
   renderLights(ctx, x, y, scale, vehicle, dimFactor) {
