@@ -6,6 +6,7 @@ export class Renderer {
     this.trafficCanvas = document.getElementById('traffic-layer');
     this.weatherCanvas = document.getElementById('weather-layer');
     this.windshieldCanvas = document.getElementById('windshield-layer');
+    this.uiCanvas = document.getElementById('ui-layer');
     
     this.skyCtx = this.skyCanvas.getContext('2d', { alpha: false });
     this.envCtx = this.envCanvas.getContext('2d', { alpha: true });
@@ -13,6 +14,7 @@ export class Renderer {
     this.trafficCtx = this.trafficCanvas.getContext('2d', { alpha: true });
     this.weatherCtx = this.weatherCanvas.getContext('2d', { alpha: true });
     this.windshieldCtx = this.windshieldCanvas.getContext('2d', { alpha: true });
+    this.uiCtx = this.uiCanvas.getContext('2d', { alpha: true });
     
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -21,7 +23,7 @@ export class Renderer {
   resize() {
     const canvases = [
       this.skyCanvas, this.envCanvas, this.roadCanvas,
-      this.trafficCanvas, this.weatherCanvas, this.windshieldCanvas
+      this.trafficCanvas, this.weatherCanvas, this.windshieldCanvas, this.uiCanvas
     ];
     
     canvases.forEach(canvas => {
@@ -31,7 +33,7 @@ export class Renderer {
     });
   }
   
-  renderSky(ctx, w, h, biome, time, horizonY) {
+  renderSky(ctx, w, h, biome, time, horizonY, heading) {
     // Sky Gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, horizonY);
     
@@ -43,9 +45,12 @@ export class Renderer {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, horizonY);
     
-    // Ground Plane
+    // Draw Hills
+    this.renderHills(ctx, w, h, horizonY, heading, biome);
+
+    // Ground Plane (Behind everything)
     ctx.fillStyle = biome.groundColor;
-    ctx.fillRect(0, horizonY - 1, w, h - horizonY + 1);
+    ctx.fillRect(0, horizonY, w, h - horizonY);
 
     // Stars
     if (biome.stars > 0.01) {
@@ -63,6 +68,96 @@ export class Renderer {
     }
   }
 
+  renderHills(ctx, w, h, horizonY, heading, biome) {
+    ctx.fillStyle = biome.groundColor;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    
+    const hillScale = 0.5;
+    const hillHeight = 60;
+    
+    for (let x = 0; x <= w; x += 5) {
+      const angle = heading + (x / w) * hillScale;
+      // Multi-layered noise for hills
+      const h1 = Math.sin(angle * 2.0) * hillHeight * 0.5;
+      const h2 = Math.sin(angle * 5.7) * hillHeight * 0.2;
+      const h3 = (Math.sin(angle * 12.0) > 0.9 ? 1 : 0) * hillHeight * 0.1; // Sudden perturbations
+      
+      const totalH = h1 + h2 + h3;
+      ctx.lineTo(x, horizonY - totalH);
+    }
+    
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Subtle hill outline
+    ctx.strokeStyle = '#000000';
+    ctx.globalAlpha = 0.3;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  renderCompass(ctx, w, h, heading) {
+    const cw = CONST.COMPASS_WIDTH;
+    const ch = CONST.COMPASS_HEIGHT;
+    const x = (w - cw) / 2;
+    const y = h - ch - 40;
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(x, y, cw, ch);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeRect(x, y, cw, ch);
+
+    // Directions
+    const directions = [
+      { name: 'N',  angle: 0 },
+      { name: 'NE', angle: Math.PI * 0.25 },
+      { name: 'E',  angle: Math.PI * 0.5 },
+      { name: 'SE', angle: Math.PI * 0.75 },
+      { name: 'S',  angle: Math.PI },
+      { name: 'SW', angle: Math.PI * 1.25 },
+      { name: 'W',  angle: Math.PI * 1.5 },
+      { name: 'NW', angle: Math.PI * 1.75 }
+    ];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, cw, ch);
+    ctx.clip();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '12px "Space Mono"';
+
+    directions.forEach(d => {
+      // Wrap heading to 0 - 2PI
+      let diff = d.angle - heading;
+      // Normalize to -PI to PI
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+
+      const screenX = x + cw / 2 + diff * (cw / (Math.PI / 2));
+      
+      if (screenX > x - 20 && screenX < x + cw + 20) {
+        ctx.globalAlpha = Math.max(0, 1 - Math.abs(diff) * 1.5);
+        ctx.fillText(d.name, screenX, y + 25);
+        
+        // Ticks
+        ctx.fillRect(screenX - 1, y, 2, 5);
+        ctx.fillRect(screenX - 1, y + ch - 5, 2, 5);
+      }
+    });
+
+    // Center indicator
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ff3333';
+    ctx.fillRect(x + cw / 2 - 1, y, 2, ch);
+
+    ctx.restore();
+  }
+
   render(state) {
     const w = this.skyCanvas.width;
     const h = this.skyCanvas.height;
@@ -71,7 +166,7 @@ export class Renderer {
     const horizonY = state.road.getHorizon(h);
     
     // Sky layer - pass horizon
-    this.renderSky(this.skyCtx, w, h, state.biome, state.time, horizonY);
+    this.renderSky(this.skyCtx, w, h, state.biome, state.time, horizonY, state.road.heading);
     
     // Road layer
     this.roadCtx.clearRect(0, 0, w, h);
@@ -126,5 +221,9 @@ export class Renderer {
     // Windshield layer
     this.windshieldCtx.clearRect(0, 0, w, h);
     state.windshield.render(this.windshieldCtx, w, h);
+
+    // UI Layer
+    this.uiCtx.clearRect(0, 0, w, h);
+    this.renderCompass(this.uiCtx, w, h, state.road.heading);
   }
 }

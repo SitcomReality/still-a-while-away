@@ -5,6 +5,7 @@ export class RoadSystem {
   constructor() {
     this.curve = 0;
     this.targetCurve = 0;
+    this.heading = 0; // Cumulative direction (radians)
     this.slope = 0;
     this.targetSlope = 0;
     this.distance = 0;
@@ -45,6 +46,9 @@ export class RoadSystem {
     const slopeNoise = noise(this.distance * CONST.SLOPE_NOISE_FREQ + this.slopeNoiseOffset);
     this.targetSlope = slopeNoise * CONST.SLOPE_NOISE_AMP;
     this.slope += (this.targetSlope - this.slope) * dt * 1.5;
+
+    // Update heading based on curve
+    this.heading += this.curve * dt * CONST.HEADING_SENSITIVITY;
     
     // Update markings
     this.markings.forEach(m => {
