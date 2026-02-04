@@ -35,9 +35,8 @@ export class EnvironmentSystem {
       distance,
       type,
       side: Math.random() > 0.5 ? 'left' : 'right',
-      // Offset relative to road center (which is the center-line markings)
-      // Since road half-width is 1.0 (of screen width), we need offset > 1.0 to be off-road
-      offset: 1.1 + Math.random() * 0.8,
+      // Much larger offset to clear the wider road (road half-width is ~1.25)
+      offset: 1.4 + Math.random() * 0.6,
       ...this.getFeatureProps(type, biome)
     };
     
