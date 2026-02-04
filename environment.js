@@ -131,7 +131,7 @@ export class EnvironmentSystem {
     
     if (height < 2) return;
     
-    // Trunk with gradient (drawn upwards from y)
+    // Trunk with gradient (anchor at base y)
     const trunkGradient = ctx.createLinearGradient(x - width * 0.15, 0, x + width * 0.15, 0);
     trunkGradient.addColorStop(0, '#1a1510');
     trunkGradient.addColorStop(0.5, '#2a2218');
@@ -139,7 +139,7 @@ export class EnvironmentSystem {
     ctx.fillStyle = trunkGradient;
     ctx.fillRect(x - width * 0.15, y - height * 0.4, width * 0.3, height * 0.4);
     
-    // Foliage layers (centered higher up)
+    // Foliage layers centered higher up
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = tree.color;
     ctx.beginPath();
@@ -150,7 +150,7 @@ export class EnvironmentSystem {
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = '#0a1a0a';
     ctx.beginPath();
-    ctx.ellipse(x - width * 0.2, y - height * 0.35, width * 0.3, height * 0.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(x - width * 0.2, y - height * 0.75, width * 0.3, height * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.globalAlpha = 1;
@@ -162,7 +162,7 @@ export class EnvironmentSystem {
     
     if (height < 3) return;
     
-    // Pole with gradient
+    // Pole with gradient (anchor at base y)
     const poleGradient = ctx.createLinearGradient(x - width/2, 0, x + width/2, 0);
     poleGradient.addColorStop(0, '#2a2a2a');
     poleGradient.addColorStop(0.5, '#4a4a4a');
