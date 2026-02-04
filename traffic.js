@@ -60,8 +60,22 @@ export class TrafficSystem {
     return colors[Math.floor(Math.random() * colors.length)];
   }
   
+  getProjectedPoint(dist, offset, height, w, h) {
+    const pos = this.road.getRoadPosAt(dist, w, h);
+    const x = pos.x + (offset * w * pos.scale);
+    const y = pos.y - (height * CONST.TRAFFIC_SIZE_SCALE * 0.7 * pos.scale);
+    return { x, y, scale: pos.scale };
+  }
+
+  drawQuad(ctx, points) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < 4; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
   render(ctx, w, h) {
-    // Render from back to front
     const sorted = [...this.vehicles].sort((a, b) => b.distance - a.distance);
     
     sorted.forEach(v => {
@@ -71,18 +85,26 @@ export class TrafficSystem {
         const pos = this.road.getRoadPosAt(v.distance, w, h);
         if (pos.scale <= 0) return;
         
+        const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
+        const width = size * 1.4;
+        const height = size * 0.7 * v.height;
         const currentRoadWidth = w * this.road.roadWidth * pos.scale;
         const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
         const x = pos.x + laneOffset;
-        const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
         
+        const q = [
+          { x: x - width/2, y: pos.y, scale: pos.scale },
+          { x: x + width/2, y: pos.y, scale: pos.scale },
+          { x: x + width/2, y: pos.y - height, scale: pos.scale },
+          { x: x - width/2, y: pos.y - height, scale: pos.scale }
+        ];
+
         const futureCurve = this.road.getCurveAt(v.distance + 20);
         const currentCurve = this.road.getCurveAt(v.distance);
-        const isTurningAway = Math.abs(futureCurve - currentCurve) > 0.05;
-        const dimFactor = isTurningAway ? 0.3 : 1.0;
+        const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
         
-        this.renderVehicleSilhouette(ctx, x, pos.y, size, v);
-        this.renderLights(ctx, x, pos.y, pos.scale, v, dimFactor);
+        this.renderVehicleSilhouette(ctx, q, v);
+        this.renderLights(ctx, q, v, dimFactor);
       }
     });
   }
@@ -91,73 +113,51 @@ export class TrafficSystem {
     const zNear = Math.max(0.1, v.distance);
     const zFar = v.distance + v.depth;
     
-    const posN = this.road.getRoadPosAt(zNear, w, h);
-    const posF = this.road.getRoadPosAt(zFar, w, h);
+    const roadW = this.road.roadWidth;
+    const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
+    const carWidth = 0.5; 
+
+    const lOff = laneOffset - carWidth/2;
+    const rOff = laneOffset + carWidth/2;
+
+    const nbl = this.getProjectedPoint(zNear, lOff, 0, w, h);
+    const nbr = this.getProjectedPoint(zNear, rOff, 0, w, h);
+    const ntl = this.getProjectedPoint(zNear, lOff, v.height, w, h);
+    const ntr = this.getProjectedPoint(zNear, rOff, v.height, w, h);
     
-    if (posN.scale <= 0) return;
+    const fbl = this.getProjectedPoint(zFar, lOff, 0, w, h);
+    const fbr = this.getProjectedPoint(zFar, rOff, 0, w, h);
+    const ftl = this.getProjectedPoint(zFar, lOff, v.height, w, h);
+    const ftr = this.getProjectedPoint(zFar, rOff, v.height, w, h);
 
-    const rwN = w * this.road.roadWidth * posN.scale;
-    const rwF = w * this.road.roadWidth * posF.scale;
-    const loN = v.lane === 'right' ? (rwN * 0.25) : (-rwN * 0.25);
-    const loF = v.lane === 'right' ? (rwF * 0.25) : (-rwF * 0.25);
-    
-    const xN = posN.x + loN;
-    const xF = posF.x + loF;
-    const yN = posN.y;
-    const yF = posF.y;
+    const nearQuad = [nbl, nbr, ntr, ntl];
+    const farQuad = [fbl, fbr, ftr, ftl];
 
-    const sizeN = CONST.TRAFFIC_SIZE_SCALE * posN.scale;
-    const sizeF = CONST.TRAFFIC_SIZE_SCALE * posF.scale;
-    const wN = sizeN * 1.4;
-    const hN = sizeN * 0.7 * v.height;
-    const wF = sizeF * 1.4;
-    const hF = sizeF * 0.7 * v.height;
-
-    // Quads for the sides and roof
-    const nl = xN - wN/2, nr = xN + wN/2, nt = yN - hN, nb = yN;
-    const fl = xF - wF/2, fr = xF + wF/2, ft = yF - hF, fb = yF;
-
-    // Far Face (Darkened)
+    // Far Face
     ctx.fillStyle = adjustBrightness(v.color, -40);
-    ctx.fillRect(fl, ft, wF, hF);
+    this.drawQuad(ctx, farQuad);
 
-    // Side Surfaces - Only draw if they are facing the camera perspective
-    const sideColor = adjustBrightness(v.color, -20);
-    ctx.fillStyle = sideColor;
-    
-    // Left side visibility: when the near-left edge is to the right of the far-left edge
-    if (nl > fl) {
-      ctx.beginPath();
-      ctx.moveTo(nl, nt); ctx.lineTo(fl, ft); ctx.lineTo(fl, fb); ctx.lineTo(nl, nb);
-      ctx.fill();
-    }
-    
-    // Right side visibility: when the near-right edge is to the left of the far-right edge
-    if (nr < fr) {
-      ctx.beginPath();
-      ctx.moveTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fr, fb); ctx.lineTo(nr, nb);
-      ctx.fill();
-    }
+    // Side Surfaces
+    ctx.fillStyle = adjustBrightness(v.color, -20);
+    if (nbl.x > fbl.x) this.drawQuad(ctx, [nbl, fbl, ftl, ntl]);
+    if (nbr.x < fbr.x) this.drawQuad(ctx, [nbr, fbr, ftr, ntr]);
 
-    // Top Surface (Roof) - visible if the car's near-top is below its far-top (camera looking down)
-    if (nt > ft) {
+    // Top Surface
+    if (ntl.y > ftl.y) {
       ctx.fillStyle = adjustBrightness(v.color, 10);
-      ctx.beginPath();
-      ctx.moveTo(nl, nt); ctx.lineTo(nr, nt); ctx.lineTo(fr, ft); ctx.lineTo(fl, ft);
-      ctx.fill();
+      this.drawQuad(ctx, [ntl, ntr, ftr, ftl]);
     }
 
-    // Near Face (The "billboard" that obscures the rest)
-    this.renderVehicleSilhouette(ctx, xN, yN, sizeN, v);
+    // Near Face
+    this.renderVehicleSilhouette(ctx, nearQuad, v);
 
-    // Lights on the relevant face (Near face for oncoming/same-way)
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
     const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
-    this.renderLights(ctx, xN, yN, posN.scale, v, dimFactor);
+    this.renderLights(ctx, nearQuad, v, dimFactor);
   }
 
-  renderLights(ctx, x, y, scale, vehicle, dimFactor) {
+  renderLights(ctx, quad, vehicle, dimFactor) {
     const isSameDirection = vehicle.lane === 'left';
     const lightColor = isSameDirection ? '#ff0000' : vehicle.headlightColor;
     const brightness = vehicle.headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0);
