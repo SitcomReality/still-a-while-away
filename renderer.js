@@ -79,13 +79,13 @@ export class Renderer {
     // Sky layer - pass horizon
     this.renderSky(this.skyCtx, w, h, state.biome, state.time, horizonY);
     
-    // Environment layer
-    this.envCtx.clearRect(0, 0, w, h);
-    state.environment.render(this.envCtx, w, h);
-    
-    // Road layer
+    // Road layer (drawn at the back)
     this.roadCtx.clearRect(0, 0, w, h);
     state.road.render(this.roadCtx, w, h);
+
+    // Environment layer (drawn in front of road)
+    this.envCtx.clearRect(0, 0, w, h);
+    state.environment.render(this.envCtx, w, h);
     
     // Traffic layer (with additive blending for headlights)
     this.trafficCtx.clearRect(0, 0, w, h);

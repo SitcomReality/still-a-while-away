@@ -131,19 +131,19 @@ export class EnvironmentSystem {
     
     if (height < 2) return;
     
-    // Trunk with gradient
+    // Trunk with gradient (drawn upwards from y)
     const trunkGradient = ctx.createLinearGradient(x - width * 0.15, 0, x + width * 0.15, 0);
     trunkGradient.addColorStop(0, '#1a1510');
     trunkGradient.addColorStop(0.5, '#2a2218');
     trunkGradient.addColorStop(1, '#1a1510');
     ctx.fillStyle = trunkGradient;
-    ctx.fillRect(x - width * 0.15, y, width * 0.3, height * 0.4);
+    ctx.fillRect(x - width * 0.15, y - height * 0.4, width * 0.3, height * 0.4);
     
-    // Foliage layers
+    // Foliage layers (centered higher up)
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = tree.color;
     ctx.beginPath();
-    ctx.ellipse(x, y - height * 0.3, width * 0.5, height * 0.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y - height * 0.7, width * 0.5, height * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
     
     // Darker layer for depth
@@ -168,7 +168,7 @@ export class EnvironmentSystem {
     poleGradient.addColorStop(0.5, '#4a4a4a');
     poleGradient.addColorStop(1, '#2a2a2a');
     ctx.fillStyle = poleGradient;
-    ctx.fillRect(x - width/2, y, width, height);
+    ctx.fillRect(x - width/2, y - height, width, height);
     
     // Light fixture
     ctx.fillStyle = '#5a5a5a';
@@ -237,7 +237,7 @@ export class EnvironmentSystem {
     
     ctx.fillStyle = '#3a3a3a';
     for (let i = 0; i < fence.segments; i++) {
-      ctx.fillRect(x + i * 5 * scale, y, width, height);
+      ctx.fillRect(x + i * 5 * scale, y - height, width, height);
     }
   }
   
@@ -249,7 +249,7 @@ export class EnvironmentSystem {
     
     ctx.fillStyle = bush.color;
     ctx.globalAlpha = 0.7;
-    ctx.fillRect(x - width/2, y, width, height);
+    ctx.fillRect(x - width/2, y - height, width, height);
     ctx.globalAlpha = 1;
   }
 }

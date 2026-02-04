@@ -30,7 +30,7 @@ export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren'
 // Environment & World
 export const ENV_VIEW_DISTANCE = 400;
 export const ENV_REMOVAL_THRESHOLD = -20;
-export const ENV_GLOBAL_SCALE = 30;   // Size multiplier for trees/buildings
+export const ENV_GLOBAL_SCALE = 110;   // Size multiplier for trees/buildings
 
 // Traffic
 export const TRAFFIC_RENDER_LIMIT = 500;
