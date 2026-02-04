@@ -28,21 +28,21 @@ export function getFeatureProps(type, biome) {
       lightColor: '#fff8e1'
     };
   } else if (type === 'building') {
-    const rows = 5;
-    const cols = 4;
-    const pattern = new Array(rows * cols);
+    // Increased pattern size to handle larger/longer buildings
+    const patternRows = 12;
+    const patternCols = 15;
+    const pattern = new Array(patternRows * patternCols);
     for (let i = 0; i < pattern.length; i++) {
       pattern[i] = Math.random();
     }
     return {
-      height: 30 + Math.random() * 40,
-      width: 20 + Math.random() * 30,
-      depth: 30 + Math.random() * 40,
-      windows: Math.floor(Math.random() * 8) + 2,
+      height: 35 + Math.random() * 50,
+      width: 25 + Math.random() * 35,
+      depth: 30 + Math.random() * 60,
       color: '#1a1a2a',
       windowPattern: pattern,
-      windowRows: rows,
-      windowCols: cols
+      patternRows,
+      patternCols
     };
   } else if (type === 'bush') {
     return {

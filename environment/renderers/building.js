@@ -53,27 +53,35 @@ export function renderBuilding(ctx, w, h, f, road) {
   for (let i = 1; i < 4; i++) ctx.lineTo(sideQuad[i].x, sideQuad[i].y);
   ctx.fill();
   
-  renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
+  // Calculate window counts based on actual dimensions
+  const winRows = 6;
+  const winColsSide = Math.max(2, Math.floor(f.depth / 8));
+  const winColsFront = Math.max(2, Math.floor(f.width / 10));
+
+  renderWindowGrid(ctx, sideQuad, winRows, winColsSide, f.windowPattern, f.patternCols || 15);
 
   if (zNear > 0.5) {
     ctx.fillStyle = f.color;
     ctx.fillRect(fl, ft, wNear, hNear);
     
-    // Front Windows - Stable pattern based on distance seed
-    ctx.fillStyle = '#ffeb3b';
-    const winW = wNear * 0.2;
-    const winH = winW;
-    const gap = wNear * 0.1;
-    const seed = Math.floor(f.distance);
+    // Front Windows - Scaled to building dimensions to prevent overflow
+    const winW = wNear * 0.15;
+    const winH = hNear * 0.1;
+    const gapX = (wNear - (winColsFront * winW)) / (winColsFront + 1);
+    const gapY = (hNear - (winRows * winH)) / (winRows + 1);
 
-    for(let r=0; r<5; r++) {
-      for(let c=0; c<3; c++) {
-         const winSeed = (seed + r * 7 + c * 13) % 100;
-         if (winSeed > 40) {
-           ctx.globalAlpha = 0.5 + (winSeed % 50) / 100;
+    for(let r=0; r < winRows; r++) {
+      for(let c=0; c < winColsFront; c++) {
+         // Use the shared pattern for consistency
+         const patternIdx = (c % (f.patternCols || 15)) + (r * (f.patternCols || 15));
+         const randVal = f.windowPattern ? f.windowPattern[patternIdx] : Math.random();
+         
+         if (randVal > 0.5) {
+           ctx.fillStyle = '#ffeb3b';
+           ctx.globalAlpha = 0.4 + (randVal - 0.5) * 1.2;
            ctx.fillRect(
-             fl + gap + c * (winW + gap),
-             ft + gap + r * (winH + gap * 1.5),
+             fl + gapX + c * (winW + gapX),
+             ft + gapY + r * (winH + gapY),
              winW, winH
            );
          }
@@ -83,18 +91,18 @@ export function renderBuilding(ctx, w, h, f, road) {
   }
 }
 
-function renderWindowGrid(ctx, quad, rows, cols, pattern = null) {
+function renderWindowGrid(ctx, quad, rows, cols, pattern = null, patternMaxCols = 15) {
   ctx.fillStyle = '#d4c455';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const idx = c + r * cols;
-      const randVal = pattern ? pattern[idx] : 0;
+      const patternIdx = (c % patternMaxCols) + (r * patternMaxCols);
+      const randVal = pattern ? pattern[patternIdx] : 0;
       if (randVal < 0.6) continue;
       
-      const uMin = (c + 0.25) / cols;
-      const uMax = (c + 0.75) / cols;
+      const uMin = (c + 0.2) / cols;
+      const uMax = (c + 0.8) / cols;
       const vMin = (r + 0.2) / rows;
-      const vMax = (r + 0.7) / rows;
+      const vMax = (r + 0.8) / rows;
       
       const p1 = bilinearMap(quad, uMin, vMin);
       const p2 = bilinearMap(quad, uMax, vMin);
