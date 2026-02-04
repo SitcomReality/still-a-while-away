@@ -25,36 +25,33 @@ export class EnvironmentSystem {
     );
   }
   
-  render(ctx, w, h) {
-    const sorted = [...this.features].sort((a, b) => b.distance - a.distance);
-    
-    sorted.forEach(f => {
-      const relDist = f.distance - this.road.distance;
-      if (relDist < 1 || relDist > CONST.ENV_VIEW_DISTANCE) return;
-      
-      const pos = this.road.getRoadPosAt(relDist, w, h);
-      if (pos.scale <= 0) return;
+  renderFeature(ctx, f, w, h) {
+    const relDist = f.distance - this.road.distance;
+    const pos = this.road.getRoadPosAt(relDist, w, h);
+    if (pos.scale <= 0) return;
 
-      const sideMultiplier = f.side === 'left' ? -1 : 1;
-      const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
-      const y = pos.y;
-      const scale = pos.scale;
-      const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
+    const sideMultiplier = f.side === 'left' ? -1 : 1;
+    const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
+    const y = pos.y;
+    const scale = pos.scale;
+    const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
-      switch (f.type) {
-        case 'building':
-          renderBuilding(ctx, w, h, f, this.road);
-          break;
-        case 'tree':
-          renderTree(ctx, x, y, renderScale, f);
-          break;
-        case 'lightpole':
-          renderLightpole(ctx, x, y, renderScale, f);
-          break;
-        case 'bush':
-          renderBush(ctx, x, y, renderScale, f);
-          break;
-      }
-    });
+    switch (f.type) {
+      case 'building':
+        renderBuilding(ctx, w, h, f, this.road);
+        break;
+      case 'tree':
+        renderTree(ctx, x, y, renderScale, f);
+        break;
+      case 'lightpole':
+        renderLightpole(ctx, x, y, renderScale, f);
+        break;
+      case 'bush':
+        renderBush(ctx, x, y, renderScale, f);
+        break;
+    }
   }
+
+  // Obsolete - functionality moved to Renderer unified depth sort
+  render(ctx, w, h) {}
 }

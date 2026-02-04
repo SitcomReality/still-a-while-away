@@ -75,39 +75,38 @@ export class TrafficSystem {
     ctx.fill();
   }
 
-  render(ctx, w, h) {
-    const sorted = [...this.vehicles].sort((a, b) => b.distance - a.distance);
-    
-    sorted.forEach(v => {
-      if (v.distance < 250) {
-        this.renderVehicle3D(ctx, w, h, v);
-      } else {
-        const pos = this.road.getRoadPosAt(v.distance, w, h);
-        if (pos.scale <= 0) return;
-        
-        const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
-        const width = size * 1.4;
-        const height = size * 0.7 * v.height;
-        const currentRoadWidth = w * this.road.roadWidth * pos.scale;
-        const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
-        const x = pos.x + laneOffset;
-        
-        const q = [
-          { x: x - width/2, y: pos.y, scale: pos.scale },
-          { x: x + width/2, y: pos.y, scale: pos.scale },
-          { x: x + width/2, y: pos.y - height, scale: pos.scale },
-          { x: x - width/2, y: pos.y - height, scale: pos.scale }
-        ];
+  renderVehicle(ctx, v, w, h) {
+    if (v.distance < 250) {
+      this.renderVehicle3D(ctx, w, h, v);
+    } else {
+      const pos = this.road.getRoadPosAt(v.distance, w, h);
+      if (pos.scale <= 0) return;
+      
+      const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
+      const width = size * 1.4;
+      const height = size * 0.7 * v.height;
+      const currentRoadWidth = w * this.road.roadWidth * pos.scale;
+      const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
+      const x = pos.x + laneOffset;
+      
+      const q = [
+        { x: x - width/2, y: pos.y, scale: pos.scale },
+        { x: x + width/2, y: pos.y, scale: pos.scale },
+        { x: x + width/2, y: pos.y - height, scale: pos.scale },
+        { x: x - width/2, y: pos.y - height, scale: pos.scale }
+      ];
 
-        const futureCurve = this.road.getCurveAt(v.distance + 20);
-        const currentCurve = this.road.getCurveAt(v.distance);
-        const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
-        
-        this.renderVehicleSilhouette(ctx, q, v);
-        this.renderLights(ctx, q, v, dimFactor);
-      }
-    });
+      const futureCurve = this.road.getCurveAt(v.distance + 20);
+      const currentCurve = this.road.getCurveAt(v.distance);
+      const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
+      
+      this.renderVehicleSilhouette(ctx, q, v);
+      this.renderLights(ctx, q, v, dimFactor);
+    }
   }
+
+  // Obsolete - functionality moved to Renderer unified depth sort
+  render(ctx, w, h) {}
 
   renderVehicle3D(ctx, w, h, v) {
     const zNear = Math.max(0.1, v.distance);
