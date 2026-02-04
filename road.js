@@ -34,7 +34,7 @@ export class RoadSystem {
     this.distance += this.speed * dt;
     
     // Update curve using noise
-    const curveNoise = noise(this.distance * 0.005 + this.curveNoiseOffset);
+    const curveNoise = noise(this.distance * 0.01 + this.curveNoiseOffset);
     this.targetCurve = curveNoise * 0.3;
     this.curve += (this.targetCurve - this.curve) * dt * 2;
     
@@ -54,8 +54,10 @@ export class RoadSystem {
   
   getHorizon(h) {
     // Horizon is based on the car's current pitch (slope at distance 0)
-    // plus a base level.
-    return h * (0.25 + this.slope * 0.1);
+    // plus a base level. Move the base horizon up so the sky occupies
+    // the top 1/4 of the screen and the landscape/road fills the lower 3/4.
+    // Keep a small slope influence so subtle pitch still adjusts horizon.
+    return h * (0.25 + this.slope * 0.05);
   }
 
   getRoadPosAt(distance, screenW, screenH) {
@@ -77,17 +79,12 @@ export class RoadSystem {
     const targetCurve = this.getCurveAt(distance);
     
     // Vanishing point shift based on relative curvature
-    // Reduced multiplier to prevent the road from leaving the screen entirely
-    const curveOffset = (targetCurve - currentCurve) * screenW * 0.25;
+    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
     
-    // Apply curvature with a higher power function to keep the road straighter for longer
-    // This anchors the road at the bottom and only curves it further up the view
-    const curveFactor = Math.pow(1 - progress, 7);
-    
-    // Shift the road center to the right to simulate driving in the left lane
-    // Reduced offset to keep line markings visible
-    const cameraLaneOffset = screenW * 0.35;
-    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * curveFactor);
+    // Shift the road center to the right (screenW * 0.18) to simulate 
+    // driving in the left lane while keeping the camera centered.
+    const cameraLaneOffset = screenW * 0.6;
+    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
