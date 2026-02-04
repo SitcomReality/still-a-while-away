@@ -73,18 +73,31 @@ export class RoadSystem {
     const y = horizon + (screenH - horizon) * progress;
     
     // X Position (Curve)
-    // Keep a straight section close to the camera, then let the curve
-    // progressively influence the vanishing point further into the distance.
+    // We anchor the road center at the bottom of the screen (distance 0)
+    // and let the curve develop towards the horizon, but only start curving
+    // after the halfway point in perspective so the near/mid view stays straight.
     const currentCurve = this.getCurveAt(0);
     const targetCurve = this.getCurveAt(distance);
     
-    // Vanishing point shift based on relative curvature
-    const curveOffset = (targetCurve - currentCurve) * screenW * 1.2;
+    // Create a curve influence factor that is 0 for the nearest half of the view
+    // and smoothly ramps to 1 at the horizon (progress from 0.5 -> 1.0).
+    const rampStart = 0.5;
+    // progress ranges [0..1]; we want a factor that's 0 when progress < rampStart,
+    // then linearly grows to 1 when progress == 1. Use a smoothstep-like ease.
+    let curveFactor = 0;
+    if (progress > rampStart) {
+      const t = (progress - rampStart) / (1 - rampStart);
+      // smoothstep easing for a gentler transition
+      curveFactor = t * t * (3 - 2 * t);
+    }
     
-    // Shift the road center slightly to the right so we're in the left lane,
-    // but keep the center line visible and heading toward the bottom-right.
-    const cameraLaneOffset = screenW * 0.48;
-    const centerX = screenW / 2 + cameraLaneOffset + (curveOffset * (1 - progress));
+    // Vanishing point shift based on relative curvature, scaled by curveFactor.
+    const curveOffset = (targetCurve - currentCurve) * screenW * 1.5 * curveFactor;
+    
+    // Shift the road center to the right (screenW * 0.6) to simulate 
+    // driving in the left lane while keeping the camera centered.
+    const cameraLaneOffset = screenW * 0.6;
+    const centerX = screenW/2 + cameraLaneOffset + (curveOffset * (1 - progress));
     
     // Scale factor for objects (objects get smaller as they move towards horizon)
     const scale = progress;
@@ -204,26 +217,8 @@ export class RoadSystem {
   }
   
   getCurveAt(distance) {
-    // Base curvature from noise, in world space
     const d = this.distance + distance;
-    const baseCurve = noise(d * 0.01 + this.curveNoiseOffset) * 0.3;
-
-    // Fade in curvature with distance so the near section of road
-    // is always straight and the bend develops further ahead.
-    const straightLength = 60; // completely straight up to this distance
-    const fadeLength = 80;     // distance over which curvature ramps in
-    const local = Math.max(0, distance);
-    
-    let t;
-    if (local <= straightLength) {
-      t = 0;
-    } else if (local >= straightLength + fadeLength) {
-      t = 1;
-    } else {
-      t = (local - straightLength) / fadeLength;
-    }
-
-    return baseCurve * t;
+    return noise(d * 0.01 + this.curveNoiseOffset) * 0.3;
   }
   
   getSlopeAt(distance) {
