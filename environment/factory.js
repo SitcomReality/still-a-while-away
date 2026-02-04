@@ -28,27 +28,31 @@ export function getFeatureProps(type, biome) {
       lightColor: '#fff8e1'
     };
   } else if (type === 'building') {
+    const height = 30 + Math.random() * 40;
     const depth = 15 + Math.random() * 20;
     const width = 20 + Math.random() * 30;
-    const rows = 5;
     
-    // Scale window columns by depth to prevent stretching
-    // Maintain roughly constant window aspect ratio
-    const cols = Math.max(2, Math.floor(depth / 4));
+    // Scale window grid by building dimensions to maintain a consistent density
+    const rows = Math.max(3, Math.floor(height / 8));
+    const sideCols = Math.max(2, Math.floor(depth / 5));
+    const frontCols = Math.max(2, Math.floor(width / 6));
     
-    const pattern = new Array(rows * cols);
-    for (let i = 0; i < pattern.length; i++) {
-      pattern[i] = Math.random();
-    }
+    const sidePattern = new Array(rows * sideCols);
+    for (let i = 0; i < sidePattern.length; i++) sidePattern[i] = Math.random();
+    
+    const frontPattern = new Array(rows * frontCols);
+    for (let i = 0; i < frontPattern.length; i++) frontPattern[i] = Math.random();
+
     return {
-      height: 30 + Math.random() * 40,
+      height: height,
       width: width,
       depth: depth,
-      windows: Math.floor(Math.random() * 8) + 2,
       color: '#1a1a2a',
-      windowPattern: pattern,
       windowRows: rows,
-      windowCols: cols
+      windowCols: sideCols,
+      windowPattern: sidePattern,
+      frontCols: frontCols,
+      frontPattern: frontPattern
     };
   } else if (type === 'bush') {
     return {

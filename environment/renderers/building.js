@@ -59,24 +59,29 @@ export function renderBuilding(ctx, w, h, f, road) {
     ctx.fillStyle = f.color;
     ctx.fillRect(fl, ft, wNear, hNear);
     
-    // Front Windows - Stable pattern based on distance seed
-    ctx.fillStyle = '#ffeb3b';
-    const winW = wNear * 0.2;
-    const winH = winW;
-    const gap = wNear * 0.1;
-    const seed = Math.floor(f.distance);
+    // Front Windows - Render using relative offsets to stay within building bounds
+    const fRows = f.windowRows;
+    const fCols = f.frontCols;
+    const fPattern = f.frontPattern;
 
-    for(let r=0; r<5; r++) {
-      for(let c=0; c<3; c++) {
-         const winSeed = (seed + r * 7 + c * 13) % 100;
-         if (winSeed > 40) {
-           ctx.globalAlpha = 0.5 + (winSeed % 50) / 100;
-           ctx.fillRect(
-             fl + gap + c * (winW + gap),
-             ft + gap + r * (winH + gap * 1.5),
-             winW, winH
-           );
-         }
+    ctx.fillStyle = '#ffeb3b';
+    for (let r = 0; r < fRows; r++) {
+      for (let c = 0; c < fCols; c++) {
+        const val = fPattern[c + r * fCols];
+        if (val > 0.4) {
+          const u = (c + 0.25) / fCols;
+          const v = (r + 0.2) / fRows;
+          const uw = 0.5 / fCols;
+          const vh = 0.5 / fRows;
+          
+          ctx.globalAlpha = 0.4 + (val - 0.4) * 0.8;
+          ctx.fillRect(
+            fl + u * wNear,
+            ft + v * hNear,
+            uw * wNear,
+            vh * hNear
+          );
+        }
       }
     }
     ctx.globalAlpha = 1;
@@ -84,12 +89,12 @@ export function renderBuilding(ctx, w, h, f, road) {
 }
 
 function renderWindowGrid(ctx, quad, rows, cols, pattern = null) {
-  ctx.fillStyle = '#d4c455';
+  ctx.fillStyle = '#ffeb3b';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const idx = c + r * cols;
       const randVal = pattern ? pattern[idx] : 0;
-      if (randVal < 0.6) continue;
+      if (randVal < 0.4) continue;
       
       const uMin = (c + 0.25) / cols;
       const uMax = (c + 0.75) / cols;
@@ -101,7 +106,7 @@ function renderWindowGrid(ctx, quad, rows, cols, pattern = null) {
       const p3 = bilinearMap(quad, uMax, vMax);
       const p4 = bilinearMap(quad, uMin, vMax);
       
-      ctx.globalAlpha = 0.4 + (randVal - 0.6) * 1.0;
+      ctx.globalAlpha = 0.4 + (randVal - 0.4) * 0.8;
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
