@@ -1,4 +1,5 @@
 import { noise } from './utils.js';
+import * as CONST from './constants.js';
 
 export class RoadSystem {
   constructor() {
@@ -7,9 +8,9 @@ export class RoadSystem {
     this.slope = 0;
     this.targetSlope = 0;
     this.distance = 0;
-    this.speed = 30; // meters per second
+    this.speed = CONST.ROAD_SPEED;
     
-    this.roadWidth = 2.0; // as fraction of screen width
+    this.roadWidth = CONST.ROAD_WIDTH;
     this.markings = [];
     this.cracks = [];
     
@@ -21,10 +22,10 @@ export class RoadSystem {
   
   initMarkings() {
     // Pre-generate road markings
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < CONST.MARKING_BATCH_SIZE; i++) {
       // Center markings (the lane divider)
       this.markings.push({
-        distance: i * 8,
+        distance: i * CONST.MARKING_SPACING,
         type: 'dash',
         lane: 'center',
         offset: 0
@@ -36,60 +37,48 @@ export class RoadSystem {
     this.distance += this.speed * dt;
     
     // Update curve using noise
-    const curveNoise = noise(this.distance * 0.01 + this.curveNoiseOffset);
-    this.targetCurve = curveNoise * 0.3;
+    const curveNoise = noise(this.distance * CONST.CURVE_NOISE_FREQ + this.curveNoiseOffset);
+    this.targetCurve = curveNoise * CONST.CURVE_NOISE_AMP;
     this.curve += (this.targetCurve - this.curve) * dt * 2;
     
     // Update slope using noise
-    const slopeNoise = noise(this.distance * 0.008 + this.slopeNoiseOffset);
-    this.targetSlope = slopeNoise * 0.15;
+    const slopeNoise = noise(this.distance * CONST.SLOPE_NOISE_FREQ + this.slopeNoiseOffset);
+    this.targetSlope = slopeNoise * CONST.SLOPE_NOISE_AMP;
     this.slope += (this.targetSlope - this.slope) * dt * 1.5;
     
     // Update markings
     this.markings.forEach(m => {
       m.distance -= this.speed * dt;
       if (m.distance < -10) {
-        m.distance += 50 * 8;
+        m.distance += CONST.MARKING_BATCH_SIZE * CONST.MARKING_SPACING;
       }
     });
   }
   
   getHorizon(h) {
-    // Horizon is based on the car's current pitch (slope at distance 0)
-    // plus a base level. Move the base horizon up so the sky occupies
-    // the top 1/4 of the screen and the landscape/road fills the lower 3/4.
-    // Keep a small slope influence so subtle pitch still adjusts horizon.
-    return h * (0.25 + this.slope * 0.05);
+    return h * (CONST.HORIZON_BASE_Y + this.slope * CONST.HORIZON_SLOPE_FACTOR);
   }
 
   getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
     
     // Perspective-correct projection: y is proportional to 1/z
-    const k = 20; 
-    const progress = k / (distance + k);
+    const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
     
     // Y Position mapped to the 3/4 landscape height
     const y = horizon + (screenH - horizon) * progress;
     
     // VANISHING POINT AND BOTTOM ANCHOR
-    // Vanishing point at horizon is screen center (0.5w).
-    // Divider at bottom is near the bottom-right corner (0.98w).
-    // This makes exactly one lane width (left lane) fill the screen width.
     const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
     
     let centerX = straightX;
     
     // HORIZONTAL CURVATURE
-    // Only apply curvature in the distance (upper half of landscape).
-    // 'progress' 1.0 is the camera, 0.0 is the horizon.
     if (progress < 0.5) {
-      // Smoothly blend curve in as we look further ahead
       const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
       const currentCurve = this.getCurveAt(0);
       const targetCurve = this.getCurveAt(distance);
       
-      // Scale curve offset by screen width
       const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
       centerX += curveOffset * curveFade;
     }
@@ -103,13 +92,11 @@ export class RoadSystem {
   }
 
   render(ctx, w, h) {
-    const segments = 70;
-    const viewDistance = 350;
+    const segments = CONST.ROAD_SEGMENTS;
+    const viewDistance = CONST.VIEW_DISTANCE;
     
     const horizon = this.getHorizon(h);
     
-    // Build road geometry strips
-    // We calculate the left and right edge points for each segment
     const points = [];
     
     for (let i = 0; i <= segments; i++) {
@@ -118,9 +105,8 @@ export class RoadSystem {
         const pos = this.getRoadPosAt(dist, w, h);
         
         // Road width tapers into distance
-        const baseWidth = w * this.roadWidth; // Width at bottom
-        const topWidth = w * 0.02; // Width at horizon (very narrow)
-        const currentWidth = baseWidth * pos.scale + topWidth * (1 - pos.scale);
+        const baseWidth = w * this.roadWidth;
+        const currentWidth = baseWidth * pos.scale + (w * CONST.ROAD_TOP_WIDTH) * (1 - pos.scale);
         
         points.push({
             x: pos.x,
@@ -160,15 +146,12 @@ export class RoadSystem {
     this.markings.forEach(m => {
       const pos = this.getRoadPosAt(m.distance, w, h);
       
-      // We only render if it's in front of us and within a reasonable distance
-      if (pos.scale <= 0 || m.distance > 250) return;
+      if (pos.scale <= 0 || m.distance > CONST.MARKING_RENDER_LIMIT) return;
       
-      // Calculate lane offset
       const baseWidth = w * this.roadWidth;
       const currentWidth = baseWidth * pos.scale;
       const laneOffset = (m.offset || 0) * currentWidth;
       
-      // To get the tangent, we look slightly further ahead on the road
       const delta = 1.0; 
       const posNext = this.getRoadPosAt(m.distance + delta, w, h);
       
@@ -176,8 +159,8 @@ export class RoadSystem {
       const dy = posNext.y - pos.y;
       const angle = Math.atan2(dy, dx);
       
-      const lineWidth = Math.max(1, 4 * pos.scale);
-      const segmentLength = 30 * pos.scale;
+      const lineWidth = Math.max(1, CONST.MARKING_WIDTH_SCALE * pos.scale);
+      const segmentLength = CONST.MARKING_LENGTH_SCALE * pos.scale;
       
       ctx.save();
       ctx.translate(pos.x + laneOffset, pos.y);
@@ -215,11 +198,11 @@ export class RoadSystem {
   
   getCurveAt(distance) {
     const d = this.distance + distance;
-    return noise(d * 0.01 + this.curveNoiseOffset) * 0.3;
+    return noise(d * CONST.CURVE_NOISE_FREQ + this.curveNoiseOffset) * CONST.CURVE_NOISE_AMP;
   }
   
   getSlopeAt(distance) {
     const d = this.distance + distance;
-    return noise(d * 0.008 + this.slopeNoiseOffset) * 0.15;
+    return noise(d * CONST.SLOPE_NOISE_FREQ + this.slopeNoiseOffset) * CONST.SLOPE_NOISE_AMP;
   }
 }

@@ -1,4 +1,5 @@
 import { noise } from './utils.js';
+import * as CONST from './constants.js';
 
 export class EnvironmentSystem {
   constructor(road) {
@@ -8,7 +9,7 @@ export class EnvironmentSystem {
   }
   
   update(dt, biome) {
-    const viewDistance = 300;
+    const viewDistance = CONST.ENV_VIEW_DISTANCE;
     
     // Spawn features ahead
     while (this.nextFeatureDistance < this.road.distance + viewDistance) {
@@ -18,7 +19,7 @@ export class EnvironmentSystem {
     
     // Remove features behind us
     this.features = this.features.filter(f => 
-      f.distance > this.road.distance - 20
+      f.distance > this.road.distance + CONST.ENV_REMOVAL_THRESHOLD
     );
   }
   
@@ -95,12 +96,11 @@ export class EnvironmentSystem {
     
     sorted.forEach(f => {
       const relDist = f.distance - this.road.distance;
-      if (relDist < 1 || relDist > 300) return; // Clip range
+      if (relDist < 1 || relDist > CONST.ENV_VIEW_DISTANCE) return; // Clip range
       
       const pos = this.road.getRoadPosAt(relDist, w, h);
       
       const sideMultiplier = f.side === 'left' ? -1 : 1;
-      // Offset is relative to road width. Half road width is roughly 1.1w at bottom.
       const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
       
       const y = pos.y;
@@ -108,8 +108,7 @@ export class EnvironmentSystem {
       
       if (scale <= 0) return;
 
-      // Apply global scale factor for environment details (10x size)
-      const renderScale = scale * 10;
+      const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
       // Render based on type
       if (f.type === 'tree') {

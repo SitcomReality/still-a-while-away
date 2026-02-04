@@ -1,4 +1,5 @@
 import { noise } from './utils.js';
+import * as CONST from './constants.js';
 
 export class TrafficSystem {
   constructor(road) {
@@ -27,7 +28,7 @@ export class TrafficSystem {
       v.distance -= relSpeed * dt;
       
       // Remove vehicles that passed us or got too far ahead
-      if (v.distance < -10 || v.distance > 500) {
+      if (v.distance < CONST.TRAFFIC_REMOVAL_THRESHOLD || v.distance > CONST.TRAFFIC_RENDER_LIMIT) {
         this.vehicles.splice(i, 1);
       }
     }
@@ -75,7 +76,7 @@ export class TrafficSystem {
       const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
       const x = pos.x + laneOffset;
       
-      const size = 350 * scale;
+      const size = CONST.TRAFFIC_SIZE_SCALE * scale;
       
       // Check if vehicle is turning away (dimming headlights)
       const futureCurve = this.road.getCurveAt(v.distance + 20);
