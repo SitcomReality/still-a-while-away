@@ -100,10 +100,8 @@ export class EnvironmentSystem {
       const pos = this.road.getRoadPosAt(relDist, w, h);
       
       const sideMultiplier = f.side === 'left' ? -1 : 1;
-      // Adjust X based on offset from road center
-      // Offset needs to scale with perspective to stay attached to road
-      const x = pos.x + (w * f.offset * sideMultiplier * pos.scale); 
-      // Note: f.offset is ~0.35-0.5. multiplied by w and scale.
+      // Offset is relative to road width. Half road width is roughly 1.1w at bottom.
+      const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
       
       const y = pos.y;
       const scale = pos.scale;

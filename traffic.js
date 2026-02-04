@@ -65,9 +65,11 @@ export class TrafficSystem {
       const y = pos.y;
       const scale = pos.scale;
       
-      // Lane offset (oncoming traffic is in right lane from our perspective)
-      // Scale the offset so it stays in the lane
-      const laneOffset = w * 0.6 * scale;
+      // Oncoming traffic is in the right lane.
+      // In our 2-lane model, road center is the divider.
+      // Right lane center is roughly 1/4 road width to the right of road center.
+      const currentRoadWidth = w * this.road.roadWidth * scale;
+      const laneOffset = currentRoadWidth * 0.25;
       const x = pos.x + laneOffset;
       
       const size = 350 * scale;

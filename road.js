@@ -9,7 +9,7 @@ export class RoadSystem {
     this.distance = 0;
     this.speed = 30; // meters per second
     
-    this.roadWidth = 3.2; // as fraction of screen width
+    this.roadWidth = 2.2; // as fraction of screen width
     this.markings = [];
     this.cracks = [];
     
@@ -22,19 +22,12 @@ export class RoadSystem {
   initMarkings() {
     // Pre-generate road markings
     for (let i = 0; i < 50; i++) {
-      // Center markings
+      // Center markings (the lane divider)
       this.markings.push({
         distance: i * 8,
         type: 'dash',
         lane: 'center',
         offset: 0
-      });
-      // Right lane edge markings (further right)
-      this.markings.push({
-        distance: i * 8,
-        type: 'dash',
-        lane: 'right',
-        offset: 0.5
       });
     }
   }
@@ -73,40 +66,34 @@ export class RoadSystem {
     const horizon = this.getHorizon(screenH);
     
     // Perspective-correct projection: y is proportional to 1/z
-    // We want distance 0 to be at the bottom of the screen (progress 1)
-    // and infinite distance to be at the horizon (progress 0)
-    const k = 20; // Perspective depth constant
+    const k = 20; 
     const progress = k / (distance + k);
     
     // Y Position
     const y = horizon + (screenH - horizon) * progress;
     
-    // X Position (Curve)
-    // Only apply curves/slopes to the upper half (progress <= 0.5)
-    // Bottom half stays straight, converging to screen center
-    let centerX;
+    // Camera is in the left lane. 
+    // Shift road center to the right so camera (screen center) is in left lane.
+    const cameraLaneOffset = screenW * 0.6;
     
+    let centerX;
     if (progress > 0.5) {
-      // Bottom half: straight convergence to screen center
-      centerX = screenW / 2;
+      // BOTTOM HALF OF SCREEN: STRAIGHT, NO CURVE
+      centerX = screenW / 2 + cameraLaneOffset;
     } else {
-      // Upper half: apply curves
+      // TOP HALF OF SCREEN: Apply curvature
       const currentCurve = this.getCurveAt(0);
       const targetCurve = this.getCurveAt(distance);
       const curveOffset = (targetCurve - currentCurve) * screenW * 1.5;
       
-      // Fade curve in as we transition from straight to curved
-      const curveFade = 1 - (progress / 0.5); // 0 at progress=0.5, 1 at progress=0
-      centerX = screenW / 2 + (curveOffset * curveFade);
+      const curveFade = 1 - (progress / 0.5);
+      centerX = screenW / 2 + cameraLaneOffset + (curveOffset * curveFade);
     }
     
-    // Scale factor for objects (objects get smaller as they move towards horizon)
-    const scale = progress;
-
     return {
       x: centerX,
       y: y,
-      scale: scale,
+      scale: progress,
       horizon
     };
   }
