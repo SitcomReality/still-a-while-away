@@ -76,9 +76,10 @@ export class EnvironmentSystem {
       };
     } else if (type === 'building') {
       return {
-        height: 30 + Math.random() * 40,
-        width: 20 + Math.random() * 30,
-        windows: Math.floor(Math.random() * 8) + 2,
+        height: 30 + Math.random() * 50,
+        width: 20 + Math.random() * 35,
+        depth: 15 + Math.random() * 25,
+        windows: Math.floor(Math.random() * 15) + 6,
         color: '#1a1a2a'
       };
     } else if (type === 'fence') {
@@ -116,13 +117,20 @@ export class EnvironmentSystem {
 
       const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
+      // Calculate road tangent angle at this distance for 3D orientation
+      const delta = 1.0;
+      const posNext = this.road.getRoadPosAt(relDist + delta, w, h);
+      const dx = posNext.x - pos.x;
+      const dy = posNext.y - pos.y;
+      const angle = Math.atan2(dy, dx);
+
       // Render based on type
       if (f.type === 'tree') {
         this.renderTree(ctx, x, y, renderScale, f);
       } else if (f.type === 'lightpole') {
         this.renderLightpole(ctx, x, y, renderScale, f);
       } else if (f.type === 'building') {
-        this.renderBuilding(ctx, x, y, renderScale, f);
+        this.renderBuilding(ctx, x, y, renderScale, f, angle);
       } else if (f.type === 'fence') {
         this.renderFence(ctx, x, y, renderScale, f);
       } else if (f.type === 'bush') {
@@ -190,28 +198,55 @@ export class EnvironmentSystem {
     }
   }
   
-  renderBuilding(ctx, x, y, scale, building) {
+  renderBuilding(ctx, x, y, scale, building, angle) {
     const height = building.height * scale;
     const width = building.width * scale;
+    const depth = building.depth * scale;
     
     if (height < 5) return;
     
-    // Building silhouette
-    ctx.fillStyle = building.color;
-    ctx.fillRect(x - width/2, y - height, width, height);
+    // Normalize angle: 0 is straight, positive is road turning right
+    const normAngle = angle + Math.PI / 2;
     
-    // Windows
+    // Calculate visible widths based on road direction (tangent)
+    const frontW = width * Math.abs(Math.cos(normAngle));
+    const sideW = depth * Math.abs(Math.sin(normAngle));
+    
+    // Determine which side is visible (simplified for faux-3D)
+    const showSideLeft = normAngle < 0;
+    
+    // Draw Side Wall (shaded darker)
+    ctx.fillStyle = '#080812';
+    if (showSideLeft) {
+      ctx.fillRect(x - frontW / 2 - sideW, y - height, sideW, height);
+    } else {
+      ctx.fillRect(x + frontW / 2, y - height, sideW, height);
+    }
+
+    // Draw Front Wall (the "billboard")
+    ctx.fillStyle = building.color;
+    ctx.fillRect(x - frontW / 2, y - height, frontW, height);
+    
+    // Windows on front face only
     ctx.fillStyle = '#ffeb3b';
     const windowSize = Math.max(1, 3 * scale);
-    const spacing = Math.max(4, 8 * scale);
+    const spacingY = Math.max(4, 8 * scale);
+    const cols = 3;
     
     for (let i = 0; i < building.windows; i++) {
-      const wx = x - width/2 + (i % 3) * spacing + spacing;
-      const wy = y - height + Math.floor(i / 3) * spacing * 1.5 + spacing;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
       
-      if (Math.random() > 0.3) { // Not all windows lit
-        ctx.globalAlpha = 0.6 + Math.random() * 0.4;
-        ctx.fillRect(wx, wy, windowSize, windowSize);
+      const wx = x - frontW / 2 + (col + 0.5) * (frontW / cols);
+      const wy = y - height + (row + 1) * spacingY;
+      
+      // Use building distance for deterministic patterns
+      if (wy < y && Math.abs(wx - x) < frontW / 2 - 1) {
+        const seed = (building.distance * 0.1 + i) % 10;
+        if (seed > 3) {
+          ctx.globalAlpha = 0.5 + Math.sin(building.distance * 0.05 + i) * 0.2;
+          ctx.fillRect(wx - windowSize / 2, wy, windowSize, windowSize);
+        }
       }
     }
     
