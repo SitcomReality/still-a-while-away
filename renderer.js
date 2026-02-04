@@ -60,6 +60,48 @@ export class Renderer {
   }
   
   renderSky(ctx, w, h, biome, time) {
+    // Calculate horizon based on road state (passed in loop via state or we can access it if we had it)
+    // Since we don't have direct access to road state here easily without changing signature,
+    // we'll rely on the fact that the sky covers the whole background.
+    // However, to draw the ground, we need the horizon line.
+    // Let's assume a default horizon for the background gradient, 
+    // but we really should draw the ground plane.
+    // We'll update the render() method to pass the horizon.
+  }
+
+  render(state) {
+    const w = this.skyCanvas.width;
+    const h = this.skyCanvas.height;
+    
+    // Calculate global horizon Y for this frame
+    const horizonY = state.road.getHorizon(h);
+    
+    // Sky layer - pass horizon
+    this.renderSky(this.skyCtx, w, h, state.biome, state.time, horizonY);
+    
+    // Environment layer
+    this.envCtx.clearRect(0, 0, w, h);
+    state.environment.render(this.envCtx, w, h);
+    
+    // Road layer
+    this.roadCtx.clearRect(0, 0, w, h);
+    state.road.render(this.roadCtx, w, h);
+    
+    // Traffic layer (with additive blending for headlights)
+    this.trafficCtx.clearRect(0, 0, w, h);
+    state.traffic.render(this.trafficCtx, w, h);
+    
+    // Weather layer
+    this.weatherCtx.clearRect(0, 0, w, h);
+    state.weather.render(this.weatherCtx, w, h);
+    
+    // Windshield layer
+    this.windshieldCtx.clearRect(0, 0, w, h);
+    state.windshield.render(this.windshieldCtx, w, h);
+  }
+  
+  renderSky(ctx, w, h, biome, time, horizonY) {
+    // Sky Gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
     
     if (biome.timeOfDay === 'day') {
@@ -81,6 +123,19 @@ export class Renderer {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
     
+    // Ground Plane
+    let groundColor;
+    if (biome.type === 'city') {
+        groundColor = '#050508'; // Dark city ground
+    } else if (biome.timeOfDay === 'day') {
+        groundColor = '#1a2a1a'; // Day grass
+    } else {
+        groundColor = '#050a05'; // Night grass
+    }
+    
+    ctx.fillStyle = groundColor;
+    ctx.fillRect(0, horizonY - 2, w, h - horizonY + 2);
+
     if (biome.timeOfDay === 'night') {
       ctx.fillStyle = '#ffffff';
       const starSeed = Math.floor(time / 10);

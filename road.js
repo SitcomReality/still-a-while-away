@@ -52,71 +52,133 @@ export class RoadSystem {
     });
   }
   
+  getHorizon(h) {
+    // Horizon is based on the car's current pitch (slope at distance 0)
+    // plus a base level.
+    return h * (0.45 + this.slope * 0.1);
+  }
+
+  getRoadPosAt(distance, screenW, screenH) {
+    // Consistent projection math for all entities
+    const horizon = this.getHorizon(screenH);
+    const maxDist = 200; // max view distance for projection calc
+    
+    // Normalized distance (0 at car, 1 at horizon)
+    // We use a linear progression for Y to match the legacy look, 
+    // but the X curve logic needs to be consistent.
+    const progress = Math.min(1, Math.max(0, distance / 150));
+    
+    // Y Position
+    const y = horizon + (screenH - horizon) * (1 - progress);
+    
+    // X Position (Curve)
+    // The curve value is the road's lateral offset at that specific distance
+    const curve = this.getCurveAt(distance);
+    // Apply perspective factor to the curve offset: (1 - progress)
+    // This makes the road converge to center at horizon (if curve is 0)
+    // or converge to the vanishing point offset by curve.
+    const centerX = screenW/2 + curve * screenW * 0.3 * (1 - progress);
+    
+    // Width scale for objects at this distance
+    const scale = (1 - progress);
+
+    return {
+      x: centerX, // center of road at this distance
+      y: y,       // vertical screen pos
+      scale: scale, // approximate scale factor
+      horizon,
+      curve
+    };
+  }
+
   render(ctx, w, h) {
-    const horizon = h * (0.45 + this.slope * 0.1);
-    const roadY = horizon;
+    const segments = 60;
+    const viewDistance = 150;
     
-    const topWidth = w * 0.15;
-    const bottomWidth = w * this.roadWidth;
+    const horizon = this.getHorizon(h);
     
-    // Road surface with gradient
-    const roadGradient = ctx.createLinearGradient(0, roadY, 0, h);
+    // Build road geometry strips
+    // We calculate the left and right edge points for each segment
+    const points = [];
+    
+    for (let i = 0; i <= segments; i++) {
+        const progress = i / segments;
+        const dist = progress * viewDistance;
+        const pos = this.getRoadPosAt(dist, w, h);
+        
+        // Road width tapers into distance
+        const baseWidth = w * this.roadWidth; // Width at bottom
+        const topWidth = w * 0.02; // Width at horizon (very narrow)
+        const currentWidth = baseWidth * pos.scale + topWidth * (1 - pos.scale);
+        
+        points.push({
+            x: pos.x,
+            y: pos.y,
+            w: currentWidth
+        });
+    }
+
+    // Draw Road Surface
+    const roadGradient = ctx.createLinearGradient(0, horizon, 0, h);
     roadGradient.addColorStop(0, '#1a1a1a');
     roadGradient.addColorStop(0.5, '#242424');
     roadGradient.addColorStop(1, '#2a2a2a');
     
     ctx.fillStyle = roadGradient;
     ctx.beginPath();
-    ctx.moveTo(w/2 - topWidth/2 + this.curve * w * 0.5, roadY);
-    ctx.lineTo(w/2 + topWidth/2 + this.curve * w * 0.5, roadY);
-    ctx.lineTo(w/2 + bottomWidth/2, h);
-    ctx.lineTo(w/2 - bottomWidth/2, h);
+    
+    // Right Edge (Near to Far)
+    ctx.moveTo(points[0].x + points[0].w/2, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x + points[i].w/2, points[i].y);
+    }
+    
+    // Left Edge (Far to Near)
+    for (let i = points.length - 1; i >= 0; i--) {
+        ctx.lineTo(points[i].x - points[i].w/2, points[i].y);
+    }
+    
     ctx.closePath();
     ctx.fill();
-    
-    this.renderMarkings(ctx, w, h, roadY, topWidth, bottomWidth);
-    this.renderTexture(ctx, w, h, roadY);
+
+    this.renderMarkings(ctx, w, h);
+    this.renderTexture(ctx, w, h, horizon);
   }
   
-  renderMarkings(ctx, w, h, roadY, topWidth, bottomWidth) {
+  renderMarkings(ctx, w, h) {
     this.markings.forEach(m => {
-      const progress = Math.max(0, m.distance / 100);
-      if (progress <= 0 || progress > 1) return;
+      // Use standard projection
+      const pos = this.getRoadPosAt(m.distance, w, h);
       
-      const y = roadY + (h - roadY) * (1 - progress);
-      const lineWidth = Math.max(1.5, 4 * (1 - progress));
-      const segmentLength = 25 * (1 - progress);
+      if (pos.scale <= 0) return;
       
-      const curvature = this.getCurveAt(m.distance);
-      const x = w/2 + curvature * w * 0.3 * (1 - progress);
+      const lineWidth = Math.max(1, 4 * pos.scale);
+      const segmentLength = 25 * pos.scale;
       
       // Marking with slight glow
       ctx.fillStyle = '#f5f5dc';
-      ctx.globalAlpha = 0.9 * (1 - progress * 0.3);
-      ctx.fillRect(x - lineWidth/2, y, lineWidth, segmentLength);
+      ctx.globalAlpha = 0.9 * Math.min(1, pos.scale + 0.2);
+      ctx.fillRect(pos.x - lineWidth/2, pos.y, lineWidth, segmentLength);
       
       // Subtle glow
       ctx.fillStyle = '#fffacd';
-      ctx.globalAlpha = 0.3 * (1 - progress * 0.5);
-      ctx.fillRect(x - lineWidth/2 - 1, y, lineWidth + 2, segmentLength);
+      ctx.globalAlpha = 0.3 * Math.min(1, pos.scale);
+      ctx.fillRect(pos.x - lineWidth/2 - 1, pos.y, lineWidth + 2, segmentLength);
       
       ctx.globalAlpha = 1;
     });
   }
   
-  renderTexture(ctx, w, h, roadY) {
+  renderTexture(ctx, w, h, horizon) {
     // Subtle noise/cracks
     ctx.globalAlpha = 0.1;
     ctx.fillStyle = '#000';
     
-    for (let i = 0; i < 30; i++) {
-      const seed = (this.distance * 0.1 + i) % 100;
-      const x = (noise(seed * 0.1) * 0.5 + 0.5) * w;
-      const y = roadY + (noise(seed * 0.15 + 50) * 0.5 + 0.5) * (h - roadY);
-      const size = noise(seed * 0.2 + 100) * 3 + 1;
-      
-      ctx.fillRect(x, y, size, 1);
-    }
+    // We can't easily project random noise dots without storing them as objects.
+    // Instead, let's just draw some static noise on the lower screen masked by the road?
+    // Or just skip for now to keep it clean, as the road surface gradient is nice enough.
+    // Let's bring back a simple noise pass that just draws on the road rect area roughly.
+    // Actually, skipping for performance and cleanliness is better than floating dots.
     
     ctx.globalAlpha = 1;
   }
@@ -129,18 +191,5 @@ export class RoadSystem {
   getSlopeAt(distance) {
     const d = this.distance + distance;
     return noise(d * 0.008 + this.slopeNoiseOffset) * 0.15;
-  }
-  
-  getRoadPosAt(distance, screenW, screenH) {
-    const curve = this.getCurveAt(distance);
-    const slope = this.getSlopeAt(distance);
-    const horizon = screenH * (0.45 + slope * 0.1);
-    
-    return {
-      horizon,
-      centerX: screenW/2 + curve * screenW * 0.3,
-      curve,
-      slope
-    };
   }
 }

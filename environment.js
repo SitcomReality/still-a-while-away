@@ -94,17 +94,21 @@ export class EnvironmentSystem {
     
     sorted.forEach(f => {
       const relDist = f.distance - this.road.distance;
-      if (relDist < 0 || relDist > 200) return;
+      if (relDist < 5 || relDist > 200) return; // Clip extremely close objects to prevent giant glitches
       
-      const progress = Math.max(0, Math.min(1, relDist / 150));
-      const roadPos = this.road.getRoadPosAt(relDist, w, h);
+      const pos = this.road.getRoadPosAt(relDist, w, h);
       
-      const y = roadPos.horizon + (h - roadPos.horizon) * (1 - progress);
       const sideMultiplier = f.side === 'left' ? -1 : 1;
-      const x = roadPos.centerX + (w * f.offset * sideMultiplier);
+      // Adjust X based on offset from road center
+      // Offset needs to scale with perspective to stay attached to road
+      const x = pos.x + (w * f.offset * sideMultiplier * pos.scale); 
+      // Note: f.offset is ~0.35-0.5. multiplied by w and scale.
       
-      const scale = (1 - progress);
+      const y = pos.y;
+      const scale = pos.scale;
       
+      if (scale <= 0) return;
+
       // Render based on type
       if (f.type === 'tree') {
         this.renderTree(ctx, x, y, scale, f);

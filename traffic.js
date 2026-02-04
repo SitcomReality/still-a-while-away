@@ -58,17 +58,18 @@ export class TrafficSystem {
     const sorted = [...this.vehicles].sort((a, b) => b.distance - a.distance);
     
     sorted.forEach(v => {
-      const progress = Math.max(0, Math.min(1, v.distance / 150));
-      if (progress <= 0) return;
+      const pos = this.road.getRoadPosAt(v.distance, w, h);
       
-      const roadPos = this.road.getRoadPosAt(v.distance, w, h);
-      const y = roadPos.horizon + (h - roadPos.horizon) * (1 - progress);
+      if (pos.scale <= 0) return;
+      
+      const y = pos.y;
+      const scale = pos.scale;
       
       // Lane offset (oncoming traffic is in right lane from our perspective)
-      const laneOffset = w * 0.15;
-      const x = roadPos.centerX + laneOffset;
+      // Scale the offset so it stays in the lane
+      const laneOffset = w * 0.15 * scale;
+      const x = pos.x + laneOffset;
       
-      const scale = (1 - progress);
       const size = 40 * scale;
       
       // Check if vehicle is turning away (dimming headlights)
