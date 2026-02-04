@@ -55,7 +55,7 @@ export class RoadSystem {
   getHorizon(h) {
     // Horizon is based on the car's current pitch (slope at distance 0)
     // plus a base level.
-    return h * (0.45 + this.slope * 0.1);
+    return h * (0.25 + this.slope * 0.1);
   }
 
   getRoadPosAt(distance, screenW, screenH) {
@@ -78,11 +78,11 @@ export class RoadSystem {
     
     // Vanishing point shift based on relative curvature
     // Reduced multiplier to prevent the road from leaving the screen entirely
-    const curveOffset = (targetCurve - currentCurve) * screenW * 0.8;
+    const curveOffset = (targetCurve - currentCurve) * screenW * 0.5;
     
-    // Apply curvature with a cubic power function to keep the road straighter near the camera
-    // This simulates the driver looking down the road, keeping the immediate path aligned
-    const curveFactor = Math.pow(1 - progress, 3);
+    // Apply curvature with a higher power function to keep the road straighter for longer
+    // This anchors the road at the bottom and only curves it further up the view
+    const curveFactor = Math.pow(1 - progress, 6);
     
     // Shift the road center to the right (screenW * 0.6) to simulate 
     // driving in the left lane while keeping the camera centered.
