@@ -56,14 +56,16 @@ export class RoadSystem {
     const horizon = h * (0.45 + this.slope * 0.1);
     const roadY = horizon;
     
-    // Draw road surface
-    ctx.fillStyle = '#2a2a2a';
-    
-    // Perspective trapezoid
     const topWidth = w * 0.15;
     const bottomWidth = w * this.roadWidth;
-    const roadHeight = h - roadY;
     
+    // Road surface with gradient
+    const roadGradient = ctx.createLinearGradient(0, roadY, 0, h);
+    roadGradient.addColorStop(0, '#1a1a1a');
+    roadGradient.addColorStop(0.5, '#242424');
+    roadGradient.addColorStop(1, '#2a2a2a');
+    
+    ctx.fillStyle = roadGradient;
     ctx.beginPath();
     ctx.moveTo(w/2 - topWidth/2 + this.curve * w * 0.5, roadY);
     ctx.lineTo(w/2 + topWidth/2 + this.curve * w * 0.5, roadY);
@@ -72,32 +74,32 @@ export class RoadSystem {
     ctx.closePath();
     ctx.fill();
     
-    // Draw road markings
     this.renderMarkings(ctx, w, h, roadY, topWidth, bottomWidth);
-    
-    // Road texture/cracks (subtle)
     this.renderTexture(ctx, w, h, roadY);
   }
   
   renderMarkings(ctx, w, h, roadY, topWidth, bottomWidth) {
-    ctx.strokeStyle = '#ffeb3b';
-    ctx.fillStyle = '#ffeb3b';
-    
     this.markings.forEach(m => {
       const progress = Math.max(0, m.distance / 100);
       if (progress <= 0 || progress > 1) return;
       
       const y = roadY + (h - roadY) * (1 - progress);
-      const roadW = topWidth + (bottomWidth - topWidth) * (1 - progress);
-      const lineWidth = Math.max(1, 3 * (1 - progress));
-      const segmentLength = 20 * (1 - progress);
+      const lineWidth = Math.max(1.5, 4 * (1 - progress));
+      const segmentLength = 25 * (1 - progress);
       
-      // Center dashed line
       const curvature = this.getCurveAt(m.distance);
       const x = w/2 + curvature * w * 0.3 * (1 - progress);
       
-      ctx.globalAlpha = 0.8 * (1 - progress * 0.5);
+      // Marking with slight glow
+      ctx.fillStyle = '#f5f5dc';
+      ctx.globalAlpha = 0.9 * (1 - progress * 0.3);
       ctx.fillRect(x - lineWidth/2, y, lineWidth, segmentLength);
+      
+      // Subtle glow
+      ctx.fillStyle = '#fffacd';
+      ctx.globalAlpha = 0.3 * (1 - progress * 0.5);
+      ctx.fillRect(x - lineWidth/2 - 1, y, lineWidth + 2, segmentLength);
+      
       ctx.globalAlpha = 1;
     });
   }

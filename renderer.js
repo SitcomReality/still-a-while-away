@@ -60,35 +60,37 @@ export class Renderer {
   }
   
   renderSky(ctx, w, h, biome, time) {
-    // Create gradient based on time of day
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
     
     if (biome.timeOfDay === 'day') {
-      gradient.addColorStop(0, '#87CEEB');
-      gradient.addColorStop(1, '#E0F6FF');
+      gradient.addColorStop(0, '#6ba3d4');
+      gradient.addColorStop(0.5, '#a8c8e1');
+      gradient.addColorStop(1, '#d4e5f0');
     } else if (biome.timeOfDay === 'sunset') {
-      gradient.addColorStop(0, '#1a1a2e');
-      gradient.addColorStop(0.3, '#d4648d');
-      gradient.addColorStop(0.6, '#f4a261');
-      gradient.addColorStop(1, '#e76f51');
+      gradient.addColorStop(0, '#0f1419');
+      gradient.addColorStop(0.3, '#3d2742');
+      gradient.addColorStop(0.5, '#8b4367');
+      gradient.addColorStop(0.7, '#d87855');
+      gradient.addColorStop(1, '#ffa563');
     } else {
-      gradient.addColorStop(0, '#0a0a1a');
-      gradient.addColorStop(1, '#1a1a2e');
+      gradient.addColorStop(0, '#050510');
+      gradient.addColorStop(0.5, '#0a0a1f');
+      gradient.addColorStop(1, '#141428');
     }
     
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
     
-    // Stars at night
     if (biome.timeOfDay === 'night') {
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = '#ffffff';
       const starSeed = Math.floor(time / 10);
-      for (let i = 0; i < 80; i++) {
+      for (let i = 0; i < 120; i++) {
         const x = (Math.sin(i * 12.9898 + starSeed) * 43758.5453) % 1;
         const y = (Math.sin(i * 78.233 + starSeed) * 43758.5453) % 1;
-        const brightness = (Math.sin(time * 2 + i) * 0.5 + 0.5) * 0.6 + 0.4;
+        const brightness = (Math.sin(time * 2 + i) * 0.5 + 0.5) * 0.4 + 0.3;
+        const size = Math.random() > 0.9 ? 2 : 1;
         ctx.globalAlpha = brightness;
-        ctx.fillRect(Math.abs(x) * w, Math.abs(y) * h * 0.4, 1, 1);
+        ctx.fillRect(Math.abs(x) * w, Math.abs(y) * h * 0.45, size, size);
       }
       ctx.globalAlpha = 1;
     }

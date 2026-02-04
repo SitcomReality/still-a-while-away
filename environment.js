@@ -126,17 +126,26 @@ export class EnvironmentSystem {
     
     if (height < 2) return;
     
-    // Trunk
-    ctx.fillStyle = '#2a2218';
+    // Trunk with gradient
+    const trunkGradient = ctx.createLinearGradient(x - width * 0.15, 0, x + width * 0.15, 0);
+    trunkGradient.addColorStop(0, '#1a1510');
+    trunkGradient.addColorStop(0.5, '#2a2218');
+    trunkGradient.addColorStop(1, '#1a1510');
+    ctx.fillStyle = trunkGradient;
     ctx.fillRect(x - width * 0.15, y, width * 0.3, height * 0.4);
     
-    // Foliage (dithered blob)
+    // Foliage layers
+    ctx.globalAlpha = 0.9;
     ctx.fillStyle = tree.color;
-    ctx.globalAlpha = 0.8;
-    
-    // Simple foliage shape
     ctx.beginPath();
     ctx.ellipse(x, y - height * 0.3, width * 0.5, height * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Darker layer for depth
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#0a1a0a';
+    ctx.beginPath();
+    ctx.ellipse(x - width * 0.2, y - height * 0.35, width * 0.3, height * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.globalAlpha = 1;
@@ -147,29 +156,40 @@ export class EnvironmentSystem {
     
     if (height < 3) return;
     
-    // Pole
-    ctx.fillStyle = '#4a4a4a';
-    ctx.fillRect(x - 1, y, 2, height);
+    // Pole with gradient
+    const poleGradient = ctx.createLinearGradient(x - 2, 0, x + 2, 0);
+    poleGradient.addColorStop(0, '#2a2a2a');
+    poleGradient.addColorStop(0.5, '#4a4a4a');
+    poleGradient.addColorStop(1, '#2a2a2a');
+    ctx.fillStyle = poleGradient;
+    ctx.fillRect(x - 1.5, y, 3, height);
     
     // Light fixture
-    ctx.fillStyle = '#6a6a6a';
-    ctx.fillRect(x - 3, y - height, 6, 3);
+    ctx.fillStyle = '#5a5a5a';
+    ctx.fillRect(x - 4, y - height, 8, 4);
     
-    // Light glow
     if (pole.hasLight) {
-      const glowSize = 60 * scale;
-      const gradient = ctx.createRadialGradient(x, y - height, 0, x, y - height, glowSize);
-      gradient.addColorStop(0, pole.lightColor + '60');
-      gradient.addColorStop(0.5, pole.lightColor + '20');
-      gradient.addColorStop(1, pole.lightColor + '00');
+      // Multiple glow layers
+      const glowSizes = [80, 50, 25];
+      const alphas = ['40', '50', '80'];
       
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x - glowSize, y - height - glowSize, glowSize * 2, glowSize * 2);
+      glowSizes.forEach((size, i) => {
+        const glowSize = size * scale;
+        const gradient = ctx.createRadialGradient(x, y - height + 2, 0, x, y - height + 2, glowSize);
+        gradient.addColorStop(0, pole.lightColor + alphas[i]);
+        gradient.addColorStop(0.5, pole.lightColor + '20');
+        gradient.addColorStop(1, pole.lightColor + '00');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x - glowSize, y - height + 2 - glowSize, glowSize * 2, glowSize * 2);
+      });
       
       // Bright core
       ctx.fillStyle = pole.lightColor;
-      ctx.globalAlpha = 0.9;
-      ctx.fillRect(x - 2, y - height - 1, 4, 2);
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.arc(x, y - height + 2, 3, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     }
   }

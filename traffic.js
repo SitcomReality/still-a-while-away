@@ -87,43 +87,70 @@ export class TrafficSystem {
   
   renderHeadlights(ctx, x, y, scale, vehicle, dimFactor) {
     const brightness = vehicle.headlightIntensity * dimFactor;
-    const headlightSpacing = 15 * scale;
-    const glowSize = 80 * scale * brightness;
+    const headlightSpacing = 12 * scale;
     
-    // Glow effect
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowSize);
-    gradient.addColorStop(0, vehicle.headlightColor + Math.floor(brightness * 128).toString(16).padStart(2, '0'));
-    gradient.addColorStop(0.5, vehicle.headlightColor + '20');
-    gradient.addColorStop(1, vehicle.headlightColor + '00');
+    // Multiple glow layers for depth
+    const glowSizes = [120, 80, 40];
+    const alphas = [0.15, 0.3, 0.6];
     
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x - glowSize, y - glowSize, glowSize * 2, glowSize * 2);
+    for (let i = 0; i < glowSizes.length; i++) {
+      const glowSize = glowSizes[i] * scale * brightness;
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowSize);
+      
+      const baseAlpha = Math.floor(alphas[i] * brightness * 255).toString(16).padStart(2, '0');
+      gradient.addColorStop(0, vehicle.headlightColor + baseAlpha);
+      gradient.addColorStop(0.4, vehicle.headlightColor + Math.floor(alphas[i] * brightness * 100).toString(16).padStart(2, '0'));
+      gradient.addColorStop(1, vehicle.headlightColor + '00');
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x - glowSize, y - glowSize, glowSize * 2, glowSize * 2);
+    }
     
-    // Bright cores
+    // Bright cores with bloom
+    const coreSize = Math.max(3, 8 * scale);
     ctx.fillStyle = vehicle.headlightColor;
-    ctx.globalAlpha = brightness;
-    const coreSize = Math.max(2, 6 * scale);
-    ctx.fillRect(x - headlightSpacing - coreSize/2, y - coreSize/2, coreSize, coreSize);
-    ctx.fillRect(x + headlightSpacing - coreSize/2, y - coreSize/2, coreSize, coreSize);
+    ctx.globalAlpha = brightness * 0.95;
+    
+    // Left headlight
+    ctx.beginPath();
+    ctx.arc(x - headlightSpacing, y, coreSize/2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Right headlight  
+    ctx.beginPath();
+    ctx.arc(x + headlightSpacing, y, coreSize/2, 0, Math.PI * 2);
+    ctx.fill();
+    
     ctx.globalAlpha = 1;
   }
   
   renderVehicleSilhouette(ctx, x, y, size, vehicle) {
-    if (size < 3) return; // Too small to render detail
+    if (size < 4) return;
     
-    ctx.fillStyle = vehicle.color;
-    ctx.globalAlpha = 0.9;
+    const width = size * 1.4;
+    const height = size * 0.7 * vehicle.height;
     
-    // Simple rectangular silhouette
-    const width = size * 1.2;
-    const height = size * 0.6 * vehicle.height;
-    
+    // Main body shadow
+    ctx.fillStyle = '#000000';
+    ctx.globalAlpha = 0.4;
     ctx.fillRect(x - width/2, y - height/2, width, height);
     
-    // Windshield highlight
-    ctx.fillStyle = '#4a4a4a';
-    ctx.globalAlpha = 0.3;
-    ctx.fillRect(x - width/3, y - height/3, width * 0.6, height * 0.4);
+    // Car body
+    ctx.fillStyle = vehicle.color;
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(x - width/2 + 2, y - height/2 + 1, width - 4, height - 2);
+    
+    // Windshield with slight glow
+    ctx.fillStyle = '#1a1a2a';
+    ctx.globalAlpha = 0.6;
+    const windW = width * 0.5;
+    const windH = height * 0.5;
+    ctx.fillRect(x - windW/2, y - windH/2, windW, windH);
+    
+    // Subtle highlight
+    ctx.fillStyle = '#444455';
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(x - windW/2, y - windH/2, windW, windH * 0.3);
     
     ctx.globalAlpha = 1;
   }
