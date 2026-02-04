@@ -75,12 +75,23 @@ export class EnvironmentSystem {
         lightColor: '#fff8e1'
       };
     } else if (type === 'building') {
+      // Precompute a stable window pattern for the building so lights/windows don't flicker.
+      const rows = 5;
+      const cols = 4;
+      const pattern = new Array(rows * cols);
+      for (let i = 0; i < pattern.length; i++) {
+        // Store a value per window (0..1) that will be used to decide light presence and intensity.
+        pattern[i] = Math.random();
+      }
       return {
         height: 30 + Math.random() * 40,
         width: 20 + Math.random() * 30,
         depth: 30 + Math.random() * 40,
         windows: Math.floor(Math.random() * 8) + 2,
-        color: '#1a1a2a'
+        color: '#1a1a2a',
+        windowPattern: pattern,
+        windowRows: rows,
+        windowCols: cols
       };
     } else if (type === 'fence') {
       return {
@@ -260,8 +271,11 @@ export class EnvironmentSystem {
     for (let i = 1; i < 4; i++) ctx.lineTo(sideQuad[i].x, sideQuad[i].y);
     ctx.fill();
     
-    // Windows on Side Wall
-    this.renderWindowGrid(ctx, sideQuad, 5, 4);
+    // Windows on Side Wall - use stored stable pattern if present
+    const rows = f.windowRows || 5;
+    const cols = f.windowCols || 4;
+    const pattern = f.windowPattern || null;
+    this.renderWindowGrid(ctx, sideQuad, rows, cols, pattern);
 
     // Draw Front Face (if visible)
     if (zNear > 0.5) {
@@ -303,11 +317,15 @@ export class EnvironmentSystem {
     return `#${(g | (b << 8) | (r << 16)).toString(16).padStart(6, '0')}`;
   }
   
-  renderWindowGrid(ctx, quad, rows, cols) {
+  renderWindowGrid(ctx, quad, rows, cols, pattern = null) {
     ctx.fillStyle = '#d4c455';
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        if (Math.random() > 0.6) continue;
+        const idx = c + r * cols;
+        // If a stable pattern array is provided, use it; otherwise fall back to stochastic behavior.
+        const randVal = pattern ? pattern[idx] : Math.random();
+        // Threshold decides whether the window is lit; keep intensity derived from the stored value.
+        if (randVal < 0.6) continue;
         
         const uMin = (c + 0.25) / cols;
         const uMax = (c + 0.75) / cols;
@@ -319,7 +337,8 @@ export class EnvironmentSystem {
         const p3 = this.bilinearMap(quad, uMax, vMax);
         const p4 = this.bilinearMap(quad, uMin, vMax);
         
-        ctx.globalAlpha = 0.4 + Math.random() * 0.4;
+        // Use a deterministic alpha/intensity based on stored value so it doesn't flicker.
+        ctx.globalAlpha = 0.4 + (randVal - 0.6) * 1.0; // maps [0.6..1] to [0.4..0.8-ish]
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
