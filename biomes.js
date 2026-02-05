@@ -41,6 +41,10 @@ export class BiomeManager {
 
   getInterpolatedState() {
     const { s1, s2, t } = this._findTimeStates();
+    return this._buildBiomeState(s1, s2, t);
+  }
+
+  _buildBiomeState(s1, s2, t) {
     const skyColors = s1.colors.map((c, i) => 
       lerpColor(c, s2.colors[i] || s2.colors[s2.colors.length - 1], t)
     );

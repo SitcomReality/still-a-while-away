@@ -4,9 +4,6 @@ export class WeatherSystem {
     this.intensity = 0;
     this.targetIntensity = 0;
     this.particles = [];
-    
-    this.transitionTimer = 0;
-    this.transitionDuration = 0;
   }
   
   update(dt, biome) {

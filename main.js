@@ -37,23 +37,21 @@ class Game {
     this.lastTime = currentTime;
     this.time += dt;
     
+    const { biomes, road, traffic, environment, weather, windshield, devMenu, renderer } = this;
+    
     // Update systems
-    this.biomes.update(dt, this.time);
-    this.road.update(dt, this.biomes.current);
-    this.traffic.update(dt, this.biomes.current);
-    this.environment.update(dt, this.biomes.current);
-    this.weather.update(dt, this.biomes.current);
-    this.windshield.update(dt);
-    this.devMenu.update(dt);
+    biomes.update(dt, this.time);
+    road.update(dt, biomes.current);
+    traffic.update(dt, biomes.current);
+    environment.update(dt, biomes.current);
+    weather.update(dt, biomes.current);
+    windshield.update(dt);
+    devMenu.update(dt);
     
     // Render layers
-    this.renderer.render({
-      road: this.road,
-      traffic: this.traffic,
-      environment: this.environment,
-      weather: this.weather,
-      windshield: this.windshield,
-      biome: this.biomes.current,
+    renderer.render({
+      road, traffic, environment, weather, windshield,
+      biome: biomes.current,
       time: this.time
     });
     
