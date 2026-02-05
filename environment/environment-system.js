@@ -52,6 +52,4 @@ export class EnvironmentSystem {
     }
   }
 
-  // Obsolete - functionality moved to Renderer unified depth sort
-  render(ctx, w, h) {}
 }

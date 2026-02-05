@@ -13,6 +13,12 @@ export function getFeatureTypes(biome) {
   }
 }
 
+function generateWindowPattern(rows, cols) {
+  const pattern = new Array(rows * cols);
+  for (let i = 0; i < pattern.length; i++) pattern[i] = Math.random();
+  return pattern;
+}
+
 export function getFeatureProps(type, biome) {
   if (type === 'tree') {
     return {
@@ -37,11 +43,8 @@ export function getFeatureProps(type, biome) {
     const sideCols = Math.max(2, Math.floor(depth / 5));
     const frontCols = Math.max(2, Math.floor(width / 6));
     
-    const sidePattern = new Array(rows * sideCols);
-    for (let i = 0; i < sidePattern.length; i++) sidePattern[i] = Math.random();
-    
-    const frontPattern = new Array(rows * frontCols);
-    for (let i = 0; i < frontPattern.length; i++) frontPattern[i] = Math.random();
+    const sidePattern = generateWindowPattern(rows, sideCols);
+    const frontPattern = generateWindowPattern(rows, frontCols);
 
     return {
       height: height,

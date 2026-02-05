@@ -1,91 +1,79 @@
 import * as CONST from '../../constants.js';
-import { adjustBrightness, bilinearMap } from './utils.js';
+import { adjustBrightness, bilinearMap, drawQuad } from './utils.js';
 
 export function renderBuilding(ctx, w, h, f, road) {
   const relDist = f.distance - road.distance;
   const depth = f.depth || 30;
-  
   const zNear = relDist - depth / 2;
   const zFar = relDist + depth / 2;
-  
   if (zFar < 1) return;
-  
-  const effZNear = Math.max(1, zNear); 
+
+  const effZNear = Math.max(1, zNear);
   const posNear = road.getRoadPosAt(effZNear, w, h);
   const posFar = road.getRoadPosAt(zFar, w, h);
-  
   if (posNear.scale <= 0 || posFar.scale <= 0) return;
-  
+
   const sideSign = f.side === 'left' ? -1 : 1;
   const xOffsetNear = w * f.offset * sideSign * posNear.scale;
   const xOffsetFar = w * f.offset * sideSign * posFar.scale;
-  
   const cxNear = posNear.x + xOffsetNear;
   const cxFar = posFar.x + xOffsetFar;
-  
-  const wNear = f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale;
-  const wFar = f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale;
-  const hNear = f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale;
-  const hFar = f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale;
-  
-  const yNear = posNear.y;
-  const yFar = posFar.y;
-  
-  const fl = cxNear - wNear / 2;
-  const fr = cxNear + wNear / 2;
-  const ft = yNear - hNear;
-  
-  const bl = cxFar - wFar / 2;
-  const br = cxFar + wFar / 2;
-  const bt = yFar - hFar;
-  
-  ctx.fillStyle = adjustBrightness(f.color, -20);
-  ctx.beginPath();
-  
-  let sideQuad = [];
-  if (f.side === 'left') {
-    sideQuad = [{x: fr, y: yNear}, {x: br, y: yFar}, {x: br, y: bt}, {x: fr, y: ft}];
-  } else {
-    sideQuad = [{x: fl, y: yNear}, {x: bl, y: yFar}, {x: bl, y: bt}, {x: fl, y: ft}];
-  }
-  
-  ctx.moveTo(sideQuad[0].x, sideQuad[0].y);
-  for (let i = 1; i < 4; i++) ctx.lineTo(sideQuad[i].x, sideQuad[i].y);
-  ctx.fill();
-  
-  renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
 
+  const dims = {
+    wNear: f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale,
+    wFar: f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale,
+    hNear: f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale,
+    hFar: f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale,
+    yNear: posNear.y,
+    yFar: posFar.y,
+    cxNear,
+    cxFar
+  };
+
+  renderBuildingSide(ctx, f, dims);
   if (zNear > 0.5) {
-    ctx.fillStyle = f.color;
-    ctx.fillRect(fl, ft, wNear, hNear);
-    
-    // Front Windows - Render using relative offsets to stay within building bounds
-    const fRows = f.windowRows;
-    const fCols = f.frontCols;
-    const fPattern = f.frontPattern;
+    renderBuildingFront(ctx, f, dims);
+  }
+}
 
-    ctx.fillStyle = '#ffeb3b';
-    for (let r = 0; r < fRows; r++) {
-      for (let c = 0; c < fCols; c++) {
-        const val = fPattern[c + r * fCols];
-        if (val > 0.4) {
-          const u = (c + 0.25) / fCols;
-          const v = (r + 0.2) / fRows;
-          const uw = 0.5 / fCols;
-          const vh = 0.5 / fRows;
-          
-          ctx.globalAlpha = 0.4 + (val - 0.4) * 0.8;
-          ctx.fillRect(
-            fl + u * wNear,
-            ft + v * hNear,
-            uw * wNear,
-            vh * hNear
-          );
-        }
+function renderBuildingSide(ctx, f, d) {
+  const { cxNear, wNear, yNear, cxFar, wFar, yFar, hNear, hFar } = d;
+  const fl = cxNear - wNear / 2, fr = cxNear + wNear / 2, ft = yNear - hNear;
+  const bl = cxFar - wFar / 2, br = cxFar + wFar / 2, bt = yFar - hFar;
+
+  const sideQuad = f.side === 'left' 
+    ? [{ x: fr, y: yNear }, { x: br, y: yFar }, { x: br, y: bt }, { x: fr, y: ft }]
+    : [{ x: fl, y: yNear }, { x: bl, y: yFar }, { x: bl, y: bt }, { x: fl, y: ft }];
+
+  ctx.fillStyle = adjustBrightness(f.color, -20);
+  drawQuad(ctx, sideQuad);
+  renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
+}
+
+function renderBuildingFront(ctx, f, d) {
+  const fl = d.cxNear - d.wNear / 2;
+  const ft = d.yNear - d.hNear;
+  
+  ctx.fillStyle = f.color;
+  ctx.fillRect(fl, ft, d.wNear, d.hNear);
+
+  const { windowRows: fRows, frontCols: fCols, frontPattern: fPattern } = f;
+  ctx.fillStyle = '#ffeb3b';
+  for (let r = 0; r < fRows; r++) {
+    for (let c = 0; c < fCols; c++) {
+      const val = fPattern[c + r * fCols];
+      if (val > 0.4) {
+        ctx.globalAlpha = 0.4 + (val - 0.4) * 0.8;
+        ctx.fillRect(
+          fl + ((c + 0.25) / fCols) * d.wNear,
+          ft + ((r + 0.2) / fRows) * d.hNear,
+          (0.5 / fCols) * d.wNear,
+          (0.5 / fRows) * d.hNear
+        );
       }
     }
-    ctx.globalAlpha = 1;
   }
+  ctx.globalAlpha = 1;
 }
 
 function renderWindowGrid(ctx, quad, rows, cols, pattern = null) {
