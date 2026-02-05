@@ -52,6 +52,27 @@ export class RoadSystem {
     return h * (CONST.HORIZON_BASE_Y + this.slope * CONST.HORIZON_SLOPE_FACTOR);
   }
 
+  /**
+   * Calculates the visual world-space heading of the road at a given distance,
+   * accounting for the "straightening" effect applied to the perspective.
+   */
+  getVisualHeadingAt(distance) {
+    const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
+    const currentHeading = this.getCurveAt(0) * CONST.HEADING_SENSITIVITY;
+    
+    // In the "straightened" zone (close to camera), the road is visually aligned with the car.
+    if (progress >= 0.5) {
+      return currentHeading;
+    }
+    
+    // In the "curved" zone, we blend from the car's heading to the world heading
+    // using the same fade logic as the positional rendering.
+    const worldHeadingAtDist = this.getCurveAt(distance) * CONST.HEADING_SENSITIVITY;
+    const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
+    
+    return currentHeading + (worldHeadingAtDist - currentHeading) * curveFade;
+  }
+
   getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
     

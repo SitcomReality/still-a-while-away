@@ -59,10 +59,11 @@ export class Renderer {
              const sideMultiplier = f.side === 'left' ? -1 : 1;
              const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
              const shadowPos = { x, y: pos.y };
+             const visualHeading = state.road.getVisualHeadingAt(relDist);
              
              const shadow = (f.type === 'building' || f.type === 'lightpole')
-               ? Shadow.createBoxShadow(this.shadowSystem, f, sunPos, state.road.heading, shadowPos, pos.scale)
-               : Shadow.createCylinderShadow(this.shadowSystem, f, sunPos, state.road.heading, shadowPos, pos.scale);
+               ? Shadow.createBoxShadow(this.shadowSystem, f, sunPos, visualHeading, shadowPos, pos.scale)
+               : Shadow.createCylinderShadow(this.shadowSystem, f, sunPos, visualHeading, shadowPos, pos.scale);
              
              if (shadow) shadows.push(shadow);
            }
@@ -87,11 +88,12 @@ export class Renderer {
              const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
              const x = pos.x + laneOffset;
              const shadowPos = { x, y: pos.y };
+             const visualHeading = state.road.getVisualHeadingAt(v.distance);
 
              // Use box shadow for cars
              const shadow = Shadow.createBoxShadow(this.shadowSystem, 
                { ...v, width: CONST.TRAFFIC_SIZE_SCALE/CONST.ENV_GLOBAL_SCALE, depth: v.depth }, 
-               sunPos, state.road.heading, shadowPos, pos.scale);
+               sunPos, visualHeading, shadowPos, pos.scale);
              
              if (shadow) shadows.push(shadow);
            }
