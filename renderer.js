@@ -16,18 +16,18 @@ export class Renderer {
     };
 
     this.skyCanvas = document.getElementById('sky-layer');
-    this.shadowCanvas = document.getElementById('shadow-layer');
     this.envCanvas = document.getElementById('environment-layer');
     this.roadCanvas = document.getElementById('road-layer');
+    this.shadowCanvas = document.getElementById('shadow-layer');
     this.trafficCanvas = document.getElementById('traffic-layer');
     this.weatherCanvas = document.getElementById('weather-layer');
     this.windshieldCanvas = document.getElementById('windshield-layer');
     this.uiCanvas = document.getElementById('ui-layer');
     
     this.skyCtx = this.skyCanvas.getContext('2d', { alpha: false });
-    this.shadowCtx = this.shadowCanvas.getContext('2d', { alpha: true });
     this.envCtx = this.envCanvas.getContext('2d', { alpha: true });
     this.roadCtx = this.roadCanvas.getContext('2d', { alpha: true });
+    this.shadowCtx = this.shadowCanvas.getContext('2d', { alpha: true });
     this.trafficCtx = this.trafficCanvas.getContext('2d', { alpha: true });
     this.weatherCtx = this.weatherCanvas.getContext('2d', { alpha: true });
     this.windshieldCtx = this.windshieldCanvas.getContext('2d', { alpha: true });
@@ -39,7 +39,7 @@ export class Renderer {
   
   resize() {
     const canvases = [
-      this.skyCanvas, this.shadowCanvas, this.envCanvas, this.roadCanvas,
+      this.skyCanvas, this.envCanvas, this.roadCanvas, this.shadowCanvas,
       this.trafficCanvas, this.weatherCanvas, this.windshieldCanvas, this.uiCanvas
     ];
     
@@ -191,55 +191,51 @@ export class Renderer {
     ctx.restore();
   }
 
-  renderShadow(ctx, w, h, f, road, lighting) {
-    if (lighting.isNightTime) return; // No shadows at night
+  getLightDirection(biome, heading) {
+    const time = biome.timeValue;
     
-    const relDist = f.distance - road.distance;
-    const pos = road.getRoadPosAt(relDist, w, h);
-    if (pos.scale <= 0) return;
-
-    const roadTangent = road.getCurveAt(relDist);
-    const objectHeading = roadTangent * 2;
-    const shadow = lighting.getShadowVector(objectHeading);
-    
-    const sideMultiplier = f.side === 'left' ? -1 : 1;
-    const baseX = pos.x + (w * f.offset * sideMultiplier * pos.scale);
-    const baseY = pos.y;
-    
-    let shadowWidth, shadowDepth;
-    
-    if (f.type === 'tree') {
-      shadowWidth = f.width * pos.scale * 30;
-      shadowDepth = f.height * pos.scale * 30;
-    } else if (f.type === 'building') {
-      shadowWidth = f.width * pos.scale * 30;
-      shadowDepth = f.height * pos.scale * 30;
-    } else if (f.type === 'lightpole') {
-      shadowWidth = 3 * pos.scale;
-      shadowDepth = f.height * pos.scale * 30;
-    } else {
-      return; // No shadow for other objects
+    // Night: fixed moonlight from northwest
+    if (biome.name === 'night') {
+      return {
+        azimuth: Math.PI * 1.25, // NW
+        elevation: Math.PI * 0.3,
+        isNight: true
+      };
     }
     
-    const shadowOffsetX = shadow.dx * shadowDepth;
-    const shadowOffsetZ = shadow.dz * shadowDepth;
+    // Day: sun moves from East to West
+    // At sunrise (0.2): azimuth = π/2 (East)
+    // At noon (0.5): azimuth = π (South), high elevation
+    // At sunset (0.8): azimuth = 3π/2 (West)
     
-    // Project shadow onto ground
-    const shadowEndDist = relDist + shadowOffsetZ;
-    const shadowEndPos = road.getRoadPosAt(shadowEndDist, w, h);
+    let sunAzimuth;
+    let sunElevation;
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.globalAlpha = 0.3;
+    if (time < 0.2) {
+      // Before sunrise
+      sunAzimuth = Math.PI / 2;
+      sunElevation = -Math.PI * 0.1;
+    } else if (time < 0.5) {
+      // Morning to noon
+      const t = (time - 0.2) / 0.3;
+      sunAzimuth = Math.PI / 2 + t * Math.PI / 2;
+      sunElevation = t * Math.PI / 2;
+    } else if (time < 0.8) {
+      // Afternoon to sunset
+      const t = (time - 0.5) / 0.3;
+      sunAzimuth = Math.PI + t * Math.PI / 2;
+      sunElevation = (1 - t) * Math.PI / 2;
+    } else {
+      // After sunset
+      sunAzimuth = 3 * Math.PI / 2;
+      sunElevation = -Math.PI * 0.1;
+    }
     
-    ctx.beginPath();
-    ctx.moveTo(baseX - shadowWidth/2, baseY);
-    ctx.lineTo(baseX + shadowWidth/2, baseY);
-    ctx.lineTo(shadowEndPos.x + shadowOffsetX + shadowWidth/2, shadowEndPos.y);
-    ctx.lineTo(shadowEndPos.x + shadowOffsetX - shadowWidth/2, shadowEndPos.y);
-    ctx.closePath();
-    ctx.fill();
-    
-    ctx.globalAlpha = 1;
+    return {
+      azimuth: sunAzimuth,
+      elevation: sunElevation,
+      isNight: false
+    };
   }
 
   render(state) {
@@ -249,6 +245,9 @@ export class Renderer {
     // Calculate global horizon Y for this frame
     const horizonY = state.road.getHorizon(h);
     
+    // Calculate light direction for this frame
+    const lightDir = this.getLightDirection(state.biome, state.road.heading);
+    
     // Sky layer - pass horizon
     this.renderSky(this.skyCtx, w, h, state.biome, state.time, horizonY, state.road.heading);
     
@@ -256,14 +255,10 @@ export class Renderer {
     this.roadCtx.clearRect(0, 0, w, h);
     state.road.render(this.roadCtx, w, h);
 
-    // Shadow layer (only during day)
+    // Shadow layer
     this.shadowCtx.clearRect(0, 0, w, h);
-    if (!state.lighting.isNightTime) {
-      state.environment.features.forEach(f => {
-        if (f.distance - state.road.distance > 0 && f.distance - state.road.distance < 500) {
-          this.renderShadow(this.shadowCtx, w, h, f, state.road, state.lighting);
-        }
-      });
+    if (!lightDir.isNight) {
+      this.renderShadows(this.shadowCtx, w, h, state, lightDir, horizonY);
     }
 
     // Mid-ground objects (Environment + Traffic)
@@ -299,12 +294,25 @@ export class Renderer {
     // Painter's algorithm: sort furthest to nearest
     renderables.sort((a, b) => b.z - a.z);
     
+    // Calculate which objects are in shadow
+    const shadowMap = new Set();
+    if (!lightDir.isNight) {
+      for (let i = 0; i < renderables.length; i++) {
+        for (let j = i + 1; j < renderables.length; j++) {
+          if (this.isInShadow(renderables[i], renderables[j], state.road, w, h, lightDir)) {
+            shadowMap.add(renderables[j]);
+          }
+        }
+      }
+    }
+    
     // Render sorted list
     renderables.forEach(item => {
+      const inShadow = shadowMap.has(item);
       if (item.type === 'env') {
-        state.environment.renderFeature(this.trafficCtx, item.data, w, h, state.lighting);
+        state.environment.renderFeature(this.trafficCtx, item.data, w, h, lightDir, inShadow);
       } else {
-        state.traffic.renderVehicle(this.trafficCtx, item.data, w, h);
+        state.traffic.renderVehicle(this.trafficCtx, item.data, w, h, lightDir, inShadow);
       }
     });
     
@@ -319,5 +327,132 @@ export class Renderer {
     // UI Layer
     this.uiCtx.clearRect(0, 0, w, h);
     this.renderCompass(this.uiCtx, w, h, state.road.heading);
+  }
+
+  renderShadows(ctx, w, h, state, lightDir, horizonY) {
+    const allObjects = [];
+    
+    // Gather environment features
+    state.environment.features.forEach(f => {
+      const relDist = f.distance - state.road.distance;
+      if (relDist > 0 && relDist < 500) {
+        allObjects.push({ type: 'env', data: f, z: relDist });
+      }
+    });
+    
+    // Gather vehicles
+    state.traffic.vehicles.forEach(v => {
+      if (v.distance > 0 && v.distance < 500) {
+        allObjects.push({ type: 'traffic', data: v, z: v.distance });
+      }
+    });
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    
+    allObjects.forEach(obj => {
+      if (obj.type === 'env') {
+        this.renderEnvShadow(ctx, w, h, obj.data, state.road, lightDir, horizonY);
+      } else {
+        this.renderVehicleShadow(ctx, w, h, obj.data, state.road, lightDir, horizonY);
+      }
+    });
+  }
+
+  renderEnvShadow(ctx, w, h, f, road, lightDir, horizonY) {
+    const relDist = f.distance - road.distance;
+    const pos = road.getRoadPosAt(relDist, w, h);
+    if (pos.scale <= 0 || pos.y < horizonY) return;
+
+    const sideMultiplier = f.side === 'left' ? -1 : 1;
+    const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
+    const y = pos.y;
+    
+    let objWidth, objHeight;
+    
+    if (f.type === 'tree') {
+      objWidth = f.width * CONST.ENV_GLOBAL_SCALE * pos.scale;
+      objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
+    } else if (f.type === 'bush') {
+      objWidth = f.width * CONST.ENV_GLOBAL_SCALE * pos.scale;
+      objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
+    } else if (f.type === 'lightpole') {
+      objWidth = 3 * pos.scale;
+      objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
+    } else if (f.type === 'building') {
+      objWidth = f.width * CONST.ENV_GLOBAL_SCALE * pos.scale;
+      objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
+    } else {
+      return;
+    }
+    
+    // Calculate shadow projection
+    const shadowAngle = lightDir.azimuth - road.heading;
+    const shadowLength = objHeight / Math.tan(lightDir.elevation);
+    
+    const dx = Math.cos(shadowAngle) * shadowLength * pos.scale;
+    const dy = Math.sin(shadowAngle) * shadowLength * pos.scale * 0.3; // Perspective squash
+    
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(x + dx - objWidth/2, y + dy, objWidth, 6 * pos.scale);
+    ctx.restore();
+  }
+
+  renderVehicleShadow(ctx, w, h, v, road, lightDir, horizonY) {
+    const pos = road.getRoadPosAt(v.distance, w, h);
+    if (pos.scale <= 0 || pos.y < horizonY) return;
+    
+    const currentRoadWidth = w * road.roadWidth * pos.scale;
+    const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
+    const x = pos.x + laneOffset;
+    const y = pos.y;
+    
+    const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
+    const carWidth = size * 1.4;
+    const carHeight = size * 0.7 * v.height;
+    
+    const shadowAngle = lightDir.azimuth - road.heading;
+    const shadowLength = carHeight / Math.tan(lightDir.elevation);
+    
+    const dx = Math.cos(shadowAngle) * shadowLength * pos.scale;
+    const dy = Math.sin(shadowAngle) * shadowLength * pos.scale * 0.3;
+    
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(x + dx - carWidth/2, y + dy, carWidth, 4 * pos.scale);
+    ctx.restore();
+  }
+
+  isInShadow(caster, receiver, road, w, h, lightDir) {
+    // Simple check: if receiver is behind caster and in shadow path
+    if (receiver.z <= caster.z) return false;
+    
+    const casterPos = road.getRoadPosAt(caster.z, w, h);
+    const receiverPos = road.getRoadPosAt(receiver.z, w, h);
+    
+    // Very approximate shadow test
+    const shadowAngle = lightDir.azimuth - road.heading;
+    const dx = Math.cos(shadowAngle);
+    
+    // Check if receiver is roughly in shadow direction from caster
+    const casterX = this.getObjectX(caster, road, w, h);
+    const receiverX = this.getObjectX(receiver, road, w, h);
+    
+    const diff = receiverX - casterX;
+    const expectedDiff = dx * (receiver.z - caster.z) * 0.1;
+    
+    return Math.abs(diff - expectedDiff) < 100;
+  }
+
+  getObjectX(obj, road, w, h) {
+    const pos = road.getRoadPosAt(obj.z, w, h);
+    if (obj.type === 'env') {
+      const sideMultiplier = obj.data.side === 'left' ? -1 : 1;
+      return pos.x + (w * obj.data.offset * sideMultiplier * pos.scale);
+    } else {
+      const currentRoadWidth = w * road.roadWidth * pos.scale;
+      const laneOffset = obj.data.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
+      return pos.x + laneOffset;
+    }
   }
 }

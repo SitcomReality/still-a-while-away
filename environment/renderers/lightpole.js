@@ -1,11 +1,11 @@
-export function renderLightpole(ctx, x, y, scale, pole) {
+export function renderLightpole(ctx, x, y, scale, pole, lightDir, inShadow) {
   const height = pole.height * scale;
   const width = Math.max(3, 1.5 * scale);
   
   if (height < 3) return;
   
   // Solid color pole
-  ctx.fillStyle = '#3a3a3a';
+  ctx.fillStyle = inShadow ? '#2a2a2a' : '#3a3a3a';
   ctx.fillRect(x - width/2, y - height, width, height);
   
   // Light fixture

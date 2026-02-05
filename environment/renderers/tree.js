@@ -1,67 +1,63 @@
-export function renderTree(ctx, x, y, scale, tree, lighting) {
+export function renderTree(ctx, x, y, scale, tree, lightDir, inShadow) {
   const height = tree.height * scale;
   const width = tree.width * scale;
   
   if (height < 2) return;
   
+  // Darken if in shadow
+  const shadowFactor = inShadow ? 0.6 : 1.0;
+  
   // Cylindrical trunk with shading
   const trunkWidth = width * 0.3;
   const trunkHeight = height * 0.4;
-  const trunkSegments = 12;
   
-  for (let i = 0; i < trunkSegments; i++) {
-    const angle = (i / trunkSegments) * Math.PI;
-    const nextAngle = ((i + 1) / trunkSegments) * Math.PI;
+  const trunkGradient = ctx.createLinearGradient(x - trunkWidth/2, y, x + trunkWidth/2, y);
+  if (lightDir && !lightDir.isNight) {
+    const lightAngle = lightDir.azimuth;
+    const leftBrightness = Math.max(0.3, Math.cos(lightAngle) * 0.5 + 0.5) * shadowFactor;
+    const rightBrightness = Math.max(0.3, Math.cos(lightAngle + Math.PI) * 0.5 + 0.5) * shadowFactor;
     
-    const x1 = x + Math.cos(angle) * trunkWidth / 2;
-    const x2 = x + Math.cos(nextAngle) * trunkWidth / 2;
-    
-    const brightness = lighting ? lighting.getCylinderShading(angle + Math.PI) : 0.6;
-    const r = 42, g = 34, b = 24;
-    const shadedColor = `rgb(${r * brightness}, ${g * brightness}, ${b * brightness})`;
-    
-    ctx.fillStyle = shadedColor;
-    ctx.fillRect(Math.min(x1, x2), y - trunkHeight, Math.abs(x2 - x1) + 1, trunkHeight);
+    trunkGradient.addColorStop(0, `rgba(42, 34, 24, ${leftBrightness})`);
+    trunkGradient.addColorStop(0.5, `rgba(42, 34, 24, ${Math.max(leftBrightness, rightBrightness)})`);
+    trunkGradient.addColorStop(1, `rgba(42, 34, 24, ${rightBrightness})`);
+  } else {
+    trunkGradient.addColorStop(0, 'rgba(42, 34, 24, 0.5)');
+    trunkGradient.addColorStop(0.5, 'rgba(42, 34, 24, 0.7)');
+    trunkGradient.addColorStop(1, 'rgba(42, 34, 24, 0.5)');
   }
+  
+  ctx.fillStyle = trunkGradient;
+  ctx.fillRect(x - trunkWidth/2, y - trunkHeight, trunkWidth, trunkHeight);
   
   // Cylindrical foliage with shading
-  const foliageRadius = width * 0.5;
+  const foliageWidth = width * 0.5;
   const foliageHeight = height * 0.6;
   const foliageCenterY = y - height * 0.7;
-  const foliageSegments = 20;
   
-  // Parse base color
-  const baseColor = tree.color;
-  const r = parseInt(baseColor.substring(1, 3), 16);
-  const g = parseInt(baseColor.substring(3, 5), 16);
-  const b = parseInt(baseColor.substring(5, 7), 16);
+  const foliageGradient = ctx.createLinearGradient(x - foliageWidth, foliageCenterY, x + foliageWidth, foliageCenterY);
   
-  for (let i = 0; i < foliageSegments; i++) {
-    const angle = (i / foliageSegments) * Math.PI;
-    const nextAngle = ((i + 1) / foliageSegments) * Math.PI;
+  if (lightDir && !lightDir.isNight) {
+    const lightAngle = lightDir.azimuth;
+    const leftBrightness = Math.max(0.4, Math.cos(lightAngle) * 0.5 + 0.5) * shadowFactor;
+    const rightBrightness = Math.max(0.4, Math.cos(lightAngle + Math.PI) * 0.5 + 0.5) * shadowFactor;
     
-    const x1 = x + Math.cos(angle) * foliageRadius;
-    const x2 = x + Math.cos(nextAngle) * foliageRadius;
+    // Parse tree color and apply brightness
+    const baseColor = tree.color;
+    const r = parseInt(baseColor.substring(1, 3), 16);
+    const g = parseInt(baseColor.substring(3, 5), 16);
+    const b = parseInt(baseColor.substring(5, 7), 16);
     
-    const brightness = lighting ? lighting.getCylinderShading(angle + Math.PI) : 0.6;
-    const shadedColor = `rgb(${r * brightness}, ${g * brightness}, ${b * brightness})`;
-    
-    ctx.fillStyle = shadedColor;
-    ctx.fillRect(
-      Math.min(x1, x2),
-      foliageCenterY - foliageHeight / 2,
-      Math.abs(x2 - x1) + 1,
-      foliageHeight
-    );
+    foliageGradient.addColorStop(0, `rgb(${r * leftBrightness}, ${g * leftBrightness}, ${b * leftBrightness})`);
+    foliageGradient.addColorStop(0.5, `rgb(${r * Math.max(leftBrightness, rightBrightness)}, ${g * Math.max(leftBrightness, rightBrightness)}, ${b * Math.max(leftBrightness, rightBrightness)})`);
+    foliageGradient.addColorStop(1, `rgb(${r * rightBrightness}, ${g * rightBrightness}, ${b * rightBrightness})`);
+  } else {
+    foliageGradient.addColorStop(0, tree.color);
+    foliageGradient.addColorStop(0.5, tree.color);
+    foliageGradient.addColorStop(1, tree.color);
   }
   
-  // Top hemisphere cap
-  if (lighting) {
-    const capBrightness = lighting.getCylinderShading(0);
-    const capColor = `rgb(${r * capBrightness}, ${g * capBrightness}, ${b * capBrightness})`;
-    ctx.fillStyle = capColor;
-    ctx.beginPath();
-    ctx.ellipse(x, foliageCenterY - foliageHeight / 2, foliageRadius, foliageRadius * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  ctx.fillStyle = foliageGradient;
+  ctx.beginPath();
+  ctx.ellipse(x, foliageCenterY, foliageWidth, foliageHeight, 0, 0, Math.PI * 2);
+  ctx.fill();
 }
