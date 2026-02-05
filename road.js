@@ -3,17 +3,13 @@ import * as CONST from './constants.js';
 
 export class RoadSystem {
   constructor() {
-    this.curve = 0;
-    this.targetCurve = 0;
     this.heading = 0; // Cumulative direction (radians)
     this.slope = 0;
-    this.targetSlope = 0;
     this.distance = 0;
     this.speed = CONST.ROAD_SPEED;
     
     this.roadWidth = CONST.ROAD_WIDTH;
     this.markings = [];
-    this.cracks = [];
     
     this.curveNoiseOffset = Math.random() * 1000;
     this.slopeNoiseOffset = Math.random() * 1000;
@@ -35,7 +31,8 @@ export class RoadSystem {
   }
   
   update(dt, biome) {
-    this.distance += this.speed * dt;
+    const { speed } = this;
+    this.distance += speed * dt;
     
     // Persistent heading and slope based on absolute distance.
     // This ensures the compass and horizon are always synced with the noise field.
@@ -88,6 +85,7 @@ export class RoadSystem {
   }
 
   render(ctx, w, h) {
+    const { roadWidth } = this;
     const segments = CONST.ROAD_SEGMENTS;
     const viewDistance = CONST.VIEW_DISTANCE;
     
@@ -135,16 +133,16 @@ export class RoadSystem {
     ctx.fill();
 
     this.renderMarkings(ctx, w, h);
-    this.renderTexture(ctx, w, h, horizon);
   }
   
   renderMarkings(ctx, w, h) {
+    const { roadWidth } = this;
     this.markings.forEach(m => {
       const pos = this.getRoadPosAt(m.distance, w, h);
       
       if (pos.scale <= 0 || m.distance > CONST.MARKING_RENDER_LIMIT) return;
       
-      const baseWidth = w * this.roadWidth;
+      const baseWidth = w * roadWidth;
       const currentWidth = baseWidth * pos.scale;
       const laneOffset = (m.offset || 0) * currentWidth;
       
@@ -158,12 +156,12 @@ export class RoadSystem {
       const lineWidth = Math.max(1, CONST.MARKING_WIDTH_SCALE * pos.scale);
       const segmentLength = CONST.MARKING_LENGTH_SCALE * pos.scale;
       
-      ctx.save();
-      ctx.translate(pos.x + laneOffset, pos.y);
-      ctx.rotate(angle);
+      // Use setTransform to avoid save/restore stack overhead for high-frequency calls
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      ctx.setTransform(cos, sin, -sin, cos, pos.x + laneOffset, pos.y);
       
       // Marking with slight glow
-      // We draw from 0 (current pos) along the tangent towards the horizon
       ctx.fillStyle = '#f5f5dc';
       ctx.globalAlpha = 0.8 * Math.min(1, pos.scale + 0.3);
       ctx.fillRect(0, -lineWidth / 2, segmentLength, lineWidth);
@@ -172,23 +170,9 @@ export class RoadSystem {
       ctx.fillStyle = '#fffacd';
       ctx.globalAlpha = 0.25 * Math.min(1, pos.scale);
       ctx.fillRect(0, -lineWidth / 2 - 1, segmentLength, lineWidth + 2);
-      
-      ctx.restore();
-      ctx.globalAlpha = 1;
     });
-  }
-  
-  renderTexture(ctx, w, h, horizon) {
-    // Subtle noise/cracks
-    ctx.globalAlpha = 0.1;
-    ctx.fillStyle = '#000';
-    
-    // We can't easily project random noise dots without storing them as objects.
-    // Instead, let's just draw some static noise on the lower screen masked by the road?
-    // Or just skip for now to keep it clean, as the road surface gradient is nice enough.
-    // Let's bring back a simple noise pass that just draws on the road rect area roughly.
-    // Actually, skipping for performance and cleanliness is better than floating dots.
-    
+    // Reset transform to identity
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
   }
   
