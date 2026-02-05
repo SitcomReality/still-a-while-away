@@ -2,6 +2,7 @@ import { CanvasManager } from './renderer/canvas-manager.js';
 import { SkyRenderer } from './renderer/sky-renderer.js';
 import { HillRenderer } from './renderer/hill-renderer.js';
 import { UIRenderer } from './renderer/ui-renderer.js';
+import { ShadowSystem } from './renderer/shadow-system.js';
 
 export class Renderer {
   constructor() {
@@ -9,9 +10,12 @@ export class Renderer {
     this.skyRenderer = new SkyRenderer();
     this.hillRenderer = new HillRenderer();
     this.uiRenderer = new UIRenderer();
+    this.shadowSystem = null; // Initialized in render if needed or lazy loaded
   }
 
   render(state) {
+    if (!this.shadowSystem) this.shadowSystem = new ShadowSystem(state.road);
+
     const w = this.canvasManager.width;
     const h = this.canvasManager.height;
     const ctxs = this.canvasManager.contexts;
@@ -31,10 +35,7 @@ export class Renderer {
     ctxs.road.clearRect(0, 0, w, h);
     state.road.render(ctxs.road, w, h);
 
-    // 3. Depth-sorted world objects (Environment + Traffic)
-    ctxs.env.clearRect(0, 0, w, h);
-    ctxs.traffic.clearRect(0, 0, w, h);
-    
+    // Prepare Renderables (Used for both Shadows and Objects)
     const renderables = [];
     
     // Gather features
@@ -59,9 +60,16 @@ export class Renderer {
         });
       }
     });
-    
-    // Painter's algorithm
+
+    // Sort for painter's algorithm
     renderables.sort((a, b) => b.z - a.z);
+
+    // 2b. Shadows (Drawn onto road layer, behind objects)
+    this.shadowSystem.render(ctxs.road, renderables, state.time, state.road.heading, w, h);
+
+    // 3. Depth-sorted world objects (Environment + Traffic)
+    ctxs.env.clearRect(0, 0, w, h);
+    ctxs.traffic.clearRect(0, 0, w, h);
     
     renderables.forEach(item => {
       if (item.type === 'env') {
