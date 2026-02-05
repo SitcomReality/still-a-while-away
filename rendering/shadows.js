@@ -28,22 +28,27 @@ export function isInShadow(caster, receiver, road, w, h, lightDir) {
 }
 
 export function renderShadows(ctx, w, h, state, lightDir, horizonY) {
+  if (lightDir.elevation <= 0) return;
+
   const allObjects = [];
   
   state.environment.features.forEach(f => {
     const relDist = f.distance - state.road.distance;
-    if (relDist > 0 && relDist < 500) {
+    if (relDist > 0 && relDist < 400) {
       allObjects.push({ type: 'env', data: f, z: relDist });
     }
   });
   
   state.traffic.vehicles.forEach(v => {
-    if (v.distance > 0 && v.distance < 500) {
+    if (v.distance > 0 && v.distance < 400) {
       allObjects.push({ type: 'traffic', data: v, z: v.distance });
     }
   });
   
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  // Depth sort to ensure shadows don't overlap strangely
+  allObjects.sort((a, b) => b.z - a.z);
+  
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
   
   allObjects.forEach(obj => {
     if (obj.type === 'env') {
@@ -68,7 +73,7 @@ function renderEnvShadow(ctx, w, h, f, road, lightDir, horizonY) {
     objWidth = f.width * CONST.ENV_GLOBAL_SCALE * pos.scale;
     objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
   } else if (f.type === 'lightpole') {
-    objWidth = 3 * pos.scale;
+    objWidth = 4 * pos.scale;
     objHeight = f.height * CONST.ENV_GLOBAL_SCALE * pos.scale;
   } else if (f.type === 'building') {
     objWidth = f.width * CONST.ENV_GLOBAL_SCALE * pos.scale;
@@ -76,14 +81,22 @@ function renderEnvShadow(ctx, w, h, f, road, lightDir, horizonY) {
   } else return;
   
   const shadowAngle = lightDir.azimuth - road.heading;
-  const shadowLength = objHeight / Math.tan(lightDir.elevation);
-  const dx = Math.cos(shadowAngle) * shadowLength * pos.scale;
-  const dy = Math.sin(shadowAngle) * shadowLength * pos.scale * 0.3;
+  // Clamp elevation to prevent infinite or negative shadow lengths
+  const effectiveElevation = Math.max(0.12, lightDir.elevation);
+  const shadowLength = (objHeight / Math.tan(effectiveElevation));
   
-  ctx.save();
-  ctx.globalAlpha = 0.3;
-  ctx.fillRect(x + dx - objWidth/2, y + dy, objWidth, 6 * pos.scale);
-  ctx.restore();
+  // Projected offset relative to the base of the object
+  const dx = Math.cos(shadowAngle) * shadowLength;
+  const dy = Math.sin(shadowAngle) * shadowLength * 0.4; // Vertical squash for flat projection
+  
+  ctx.beginPath();
+  ctx.moveTo(x - objWidth / 2, y);
+  ctx.lineTo(x + objWidth / 2, y);
+  // Taper the tip of the shadow slightly
+  ctx.lineTo(x + dx + (objWidth / 2) * 0.5, y + dy);
+  ctx.lineTo(x + dx - (objWidth / 2) * 0.5, y + dy);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function renderVehicleShadow(ctx, w, h, v, road, lightDir, horizonY) {
@@ -100,12 +113,17 @@ function renderVehicleShadow(ctx, w, h, v, road, lightDir, horizonY) {
   const carHeight = size * 0.7 * v.height;
   
   const shadowAngle = lightDir.azimuth - road.heading;
-  const shadowLength = carHeight / Math.tan(lightDir.elevation);
-  const dx = Math.cos(shadowAngle) * shadowLength * pos.scale;
-  const dy = Math.sin(shadowAngle) * shadowLength * pos.scale * 0.3;
+  const effectiveElevation = Math.max(0.12, lightDir.elevation);
+  const shadowLength = (carHeight / Math.tan(effectiveElevation));
   
-  ctx.save();
-  ctx.globalAlpha = 0.3;
-  ctx.fillRect(x + dx - carWidth/2, y + dy, carWidth, 4 * pos.scale);
-  ctx.restore();
+  const dx = Math.cos(shadowAngle) * shadowLength;
+  const dy = Math.sin(shadowAngle) * shadowLength * 0.4;
+  
+  ctx.beginPath();
+  ctx.moveTo(x - carWidth / 2, y);
+  ctx.lineTo(x + carWidth / 2, y);
+  ctx.lineTo(x + dx + (carWidth / 2) * 0.8, y + dy);
+  ctx.lineTo(x + dx - (carWidth / 2) * 0.8, y + dy);
+  ctx.closePath();
+  ctx.fill();
 }
