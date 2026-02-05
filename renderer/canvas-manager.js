@@ -3,6 +3,7 @@ export class CanvasManager {
     this.layers = {
       sky: document.getElementById('sky-layer'),
       env: document.getElementById('environment-layer'),
+      shadow: document.getElementById('shadow-layer'),
       road: document.getElementById('road-layer'),
       traffic: document.getElementById('traffic-layer'),
       weather: document.getElementById('weather-layer'),
