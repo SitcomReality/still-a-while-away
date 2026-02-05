@@ -49,15 +49,16 @@ export class EnvironmentSystem {
     const scale = pos.scale * lodScale;
     const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
-    // Horizon occlusion check
-    const horizonY = this.road.getHorizonAtDistance(relDist, h);
+    // Horizon occlusion check: use the actual visual horizon of the road
+    const horizonY = this.road.getHorizon(h);
     const objectTop = y - (f.height || 15) * renderScale;
 
-    // Skip if completely below horizon
+    // If the top of the object is below the horizon, it's completely hidden
     if (objectTop > horizonY) return;
 
-    // Set up clipping if partially occluded
-    const needsClip = y > horizonY;
+    // If the base of the object is above the horizon line (smaller Y), 
+    // it's behind a hill and needs clipping.
+    const needsClip = y < horizonY;
     if (needsClip) {
       ctx.save();
       ctx.beginPath();
@@ -96,13 +97,18 @@ export class EnvironmentSystem {
       const pos = this.road.getRoadPosAt(relDist, w, h);
       if (pos.scale <= 0) return;
 
-      const horizonY = this.road.getHorizonAtDistance(relDist, h);
+      const horizonY = this.road.getHorizon(h);
 
       // LoD scale for distant zones
       const lodProgress = (relDist - CONST.LOD_START_DISTANCE) / 200;
       const lodScale = Math.max(0.02, 1.0 - lodProgress);
 
       ctx.globalAlpha = Math.min(0.6, lodScale * 2);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, w, horizonY);
+      ctx.clip();
 
       if (zone.type === 'city') {
         // Distant city skyline
@@ -113,7 +119,7 @@ export class EnvironmentSystem {
           const width = (10 + Math.random() * 15) * pos.scale * lodScale;
 
           const x = pos.x + xOffset;
-          const y = Math.min(horizonY, pos.y);
+          const y = pos.y;
 
           ctx.fillStyle = '#0a0a1a';
           ctx.fillRect(x - width / 2, y - height, width, height);
@@ -127,13 +133,14 @@ export class EnvironmentSystem {
           const width = height * 0.6;
 
           const x = pos.x + xOffset;
-          const y = Math.min(horizonY, pos.y);
+          const y = pos.y;
 
           ctx.fillStyle = '#0a1a0a';
           ctx.fillRect(x - width / 2, y - height, width, height);
         }
       }
 
+      ctx.restore();
       ctx.globalAlpha = 1;
     });
   }

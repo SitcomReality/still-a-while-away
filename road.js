@@ -67,7 +67,10 @@ export class RoadSystem {
     const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
     
     // Y Position mapped to the 3/4 landscape height
-    const y = horizon + (screenH - horizon) * progress;
+    // Adjust Y based on the relative slope to create hills/valleys
+    const slopeAtDist = this.getSlopeAt(distance);
+    const slopeDiff = slopeAtDist - this.getSlopeAt(0);
+    const y = horizon + (screenH - horizon) * progress + (slopeDiff * screenH * 0.5 * progress);
     
     // VANISHING POINT AND BOTTOM ANCHOR
     const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
