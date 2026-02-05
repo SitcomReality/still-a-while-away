@@ -1,6 +1,6 @@
 import { noise } from './utils.js';
 import * as CONST from './constants.js';
-import { adjustBrightness, bilinearMap } from './environment/renderers/utils.js';
+import { adjustBrightness, bilinearMap, drawQuad, renderGlow } from './environment/renderers/utils.js';
 
 export class TrafficSystem {
   constructor(road) {
@@ -11,24 +11,22 @@ export class TrafficSystem {
   }
   
   update(dt, biome) {
+    const { trafficDensity } = biome;
     this.spawnTimer += dt;
     
-    // Spawn new vehicles based on biome traffic density
-    if (this.spawnTimer >= this.spawnInterval / biome.trafficDensity) {
+    if (this.spawnTimer >= this.spawnInterval / trafficDensity) {
       this.spawnVehicle(biome);
       this.spawnTimer = 0;
       this.spawnInterval = 2 + Math.random() * 4;
     }
     
-    // Update existing vehicles
     for (let i = this.vehicles.length - 1; i >= 0; i--) {
       const v = this.vehicles[i];
-      // Oncoming traffic (right lane) moves towards us.
-      // Same-direction traffic (left lane) moves relative to our speed.
-      const relSpeed = v.lane === 'right' ? (this.road.speed + v.speed) : (this.road.speed - v.speed);
+      const { lane, speed, distance } = v;
+      
+      const relSpeed = lane === 'right' ? (this.road.speed + speed) : (this.road.speed - speed);
       v.distance -= relSpeed * dt;
       
-      // Remove vehicles that passed us or got too far ahead
       if (v.distance < CONST.TRAFFIC_REMOVAL_THRESHOLD || v.distance > CONST.TRAFFIC_RENDER_LIMIT) {
         this.vehicles.splice(i, 1);
       }
@@ -67,62 +65,45 @@ export class TrafficSystem {
     return { x, y, scale: pos.scale };
   }
 
-  drawQuad(ctx, points) {
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < 4; i++) ctx.lineTo(points[i].x, points[i].y);
-    ctx.closePath();
-    ctx.fill();
-  }
-
   renderVehicle(ctx, v, w, h) {
     if (v.distance < 250) {
       this.renderVehicle3D(ctx, w, h, v);
     } else {
-      const pos = this.road.getRoadPosAt(v.distance, w, h);
-      if (pos.scale <= 0) return;
-      
-      const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
-      const width = size * 1.4;
-      const height = size * 0.7 * v.height;
-      const currentRoadWidth = w * this.road.roadWidth * pos.scale;
-      const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
-      const baseCenterX = pos.x + laneOffset;
-      
-      // Compute perspective-aware horizontal contraction based on curvature change.
-      // If the vehicle is turning relative to the camera, its forward face should appear
-      // horizontally squashed similar to nearby 3D cars.
-      const futureCurve = this.road.getCurveAt(v.distance + 20);
-      const currentCurve = this.road.getCurveAt(v.distance);
-      const curveDelta = futureCurve - currentCurve;
-      
-      // Shrink factor: larger curve differences -> more horizontal contraction.
-      // Clamp so vehicles don't invert or disappear.
-      const shrink = Math.max(0.3, 1 - Math.abs(curveDelta) * 4.0);
-      
-      // Slight horizontal offset of the front face to simulate rotation direction.
-      const frontOffset = curveDelta * w * 0.25 * pos.scale;
-      
-      const frontCenterX = baseCenterX + frontOffset;
-      const frontWidth = width * shrink;
-      
-      // Build quad with bottom (rear) using full width and top (front) using contracted width & offset.
-      const q = [
-        { x: baseCenterX - width / 2, y: pos.y, scale: pos.scale },                     // bottom-left (rear)
-        { x: baseCenterX + width / 2, y: pos.y, scale: pos.scale },                     // bottom-right (rear)
-        { x: frontCenterX + frontWidth / 2, y: pos.y - height, scale: pos.scale },      // top-right (front face)
-        { x: frontCenterX - frontWidth / 2, y: pos.y - height, scale: pos.scale }       // top-left (front face)
-      ];
-
-      const dimFactor = Math.abs(curveDelta) > 0.05 ? 0.3 : 1.0;
-      
-      this.renderVehicleSilhouette(ctx, q, v);
-      this.renderLights(ctx, q, v, dimFactor);
+      this.renderVehicleLOD(ctx, w, h, v);
     }
   }
 
-  // Obsolete - functionality moved to Renderer unified depth sort
-  render(ctx, w, h) {}
+  renderVehicleLOD(ctx, w, h, v) {
+    const pos = this.road.getRoadPosAt(v.distance, w, h);
+    if (pos.scale <= 0) return;
+    
+    const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
+    const width = size * 1.4;
+    const height = size * 0.7 * v.height;
+    const currentRoadWidth = w * this.road.roadWidth * pos.scale;
+    const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
+    const baseCenterX = pos.x + laneOffset;
+    
+    const futureCurve = this.road.getCurveAt(v.distance + 20);
+    const currentCurve = this.road.getCurveAt(v.distance);
+    const curveDelta = futureCurve - currentCurve;
+    
+    const shrink = Math.max(0.3, 1 - Math.abs(curveDelta) * 4.0);
+    const frontOffset = curveDelta * w * 0.25 * pos.scale;
+    const frontCenterX = baseCenterX + frontOffset;
+    const frontWidth = width * shrink;
+    
+    const q = [
+      { x: baseCenterX - width / 2, y: pos.y, scale: pos.scale },
+      { x: baseCenterX + width / 2, y: pos.y, scale: pos.scale },
+      { x: frontCenterX + frontWidth / 2, y: pos.y - height, scale: pos.scale },
+      { x: frontCenterX - frontWidth / 2, y: pos.y - height, scale: pos.scale }
+    ];
+
+    const dimFactor = Math.abs(curveDelta) > 0.05 ? 0.3 : 1.0;
+    this.renderVehicleSilhouette(ctx, q, v);
+    this.renderLights(ctx, q, v, dimFactor);
+  }
 
   renderVehicle3D(ctx, w, h, v) {
     const zNear = Math.max(0.1, v.distance);
@@ -146,24 +127,20 @@ export class TrafficSystem {
     const ftr = this.getProjectedPoint(zFar, rOff, v.height, w, h);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
-    const farQuad = [fbl, fbr, ftr, ftl];
-
-    // Far Face
+    
+    // Draw Surfaces
     ctx.fillStyle = adjustBrightness(v.color, -40);
-    this.drawQuad(ctx, farQuad);
+    drawQuad(ctx, [fbl, fbr, ftr, ftl]); // Far
 
-    // Side Surfaces
     ctx.fillStyle = adjustBrightness(v.color, -20);
-    if (nbl.x > fbl.x) this.drawQuad(ctx, [nbl, fbl, ftl, ntl]);
-    if (nbr.x < fbr.x) this.drawQuad(ctx, [nbr, fbr, ftr, ntr]);
+    if (nbl.x > fbl.x) drawQuad(ctx, [nbl, fbl, ftl, ntl]); // Left
+    if (nbr.x < fbr.x) drawQuad(ctx, [nbr, fbr, ftr, ntr]); // Right
 
-    // Top Surface
     if (ntl.y > ftl.y) {
       ctx.fillStyle = adjustBrightness(v.color, 10);
-      this.drawQuad(ctx, [ntl, ntr, ftr, ftl]);
+      drawQuad(ctx, [ntl, ntr, ftr, ftl]); // Top
     }
 
-    // Near Face
     this.renderVehicleSilhouette(ctx, nearQuad, v);
 
     const futureCurve = this.road.getCurveAt(v.distance + 20);
@@ -173,36 +150,23 @@ export class TrafficSystem {
   }
 
   renderLights(ctx, quad, vehicle, dimFactor) {
-    const isSameDirection = vehicle.lane === 'left';
-    const lightColor = isSameDirection ? '#ff0000' : vehicle.headlightColor;
-    const brightness = vehicle.headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0);
+    const { lane, headlightColor, headlightIntensity } = vehicle;
+    const isSameDirection = lane === 'left';
+    const lightColor = isSameDirection ? '#ff0000' : headlightColor;
+    const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0);
     const scale = quad[0].scale;
 
-    // Use bilinear mapping to position lights on the face
     const lightL = bilinearMap(quad, 0.2, 0.75);
     const lightR = bilinearMap(quad, 0.8, 0.75);
     
-    // Only massive bloom for oncoming headlights
     if (!isSameDirection) {
-      const glowSizes = [1200, 800, 400];
-      const alphas = [0.15, 0.3, 0.6];
-      [lightL, lightR].forEach(pt => {
-        for (let i = 0; i < glowSizes.length; i++) {
-          const glowSize = glowSizes[i] * scale * brightness;
-          const gradient = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, glowSize);
-          const baseAlpha = Math.floor(alphas[i] * brightness * 255).toString(16).padStart(2, '0');
-          gradient.addColorStop(0, lightColor + baseAlpha);
-          gradient.addColorStop(0.4, lightColor + Math.floor(alphas[i] * brightness * 100).toString(16).padStart(2, '0'));
-          gradient.addColorStop(1, lightColor + '00');
-          ctx.fillStyle = gradient;
-          ctx.fillRect(pt.x - glowSize, pt.y - glowSize, glowSize * 2, glowSize * 2);
-        }
-      });
+      const glowSize = 1000 * scale * brightness;
+      renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, 0.4 * brightness);
+      renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, 0.4 * brightness);
     } else {
-      // Small glow for taillights
       const glowSize = 100 * scale * brightness;
-      ctx.fillStyle = lightColor;
       ctx.globalAlpha = 0.3 * brightness;
+      ctx.fillStyle = lightColor;
       ctx.beginPath(); ctx.arc(lightL.x, lightL.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(lightR.x, lightR.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
@@ -224,34 +188,28 @@ export class TrafficSystem {
     const width = Math.abs(quad[1].x - quad[0].x);
     const centerX = (quad[0].x + quad[1].x) / 2;
     
-    // Shadow under car
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
 
-    // Car body (Perspective-correct near face)
     ctx.fillStyle = vehicle.color;
-    this.drawQuad(ctx, quad);
+    drawQuad(ctx, quad);
     
-    // Windshield / Windows - Mapped within the quad face
     ctx.fillStyle = '#0a0a0f';
-    const windQuad = [
+    drawQuad(ctx, [
       bilinearMap(quad, 0.1, 0.5),
       bilinearMap(quad, 0.9, 0.5),
       bilinearMap(quad, 0.9, 0.1),
       bilinearMap(quad, 0.1, 0.1)
-    ];
-    this.drawQuad(ctx, windQuad);
+    ]);
     
-    // Subtle highlight on roof edge
     ctx.fillStyle = '#ffffff';
     ctx.globalAlpha = 0.1;
-    const highQuad = [
+    drawQuad(ctx, [
       bilinearMap(quad, 0, 0.1),
       bilinearMap(quad, 1, 0.1),
       bilinearMap(quad, 1, 0),
       bilinearMap(quad, 0, 0)
-    ];
-    this.drawQuad(ctx, highQuad);
+    ]);
     
     ctx.globalAlpha = 1;
   }
