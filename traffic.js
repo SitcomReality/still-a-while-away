@@ -76,18 +76,6 @@ export class TrafficSystem {
   }
 
   renderVehicle(ctx, v, w, h) {
-    const horizonY = this.road.getHorizon(h);
-    const pos = this.road.getRoadPosAt(v.distance, w, h);
-    
-    // Simple hill occlusion check
-    const needsClip = pos.y < horizonY;
-    if (needsClip) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, w, horizonY);
-      ctx.clip();
-    }
-
     if (v.distance < 250) {
       this.renderVehicle3D(ctx, w, h, v);
     } else {
@@ -130,10 +118,6 @@ export class TrafficSystem {
       
       this.renderVehicleSilhouette(ctx, q, v);
       this.renderLights(ctx, q, v, dimFactor);
-    }
-
-    if (needsClip) {
-      ctx.restore();
     }
   }
 

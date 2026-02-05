@@ -195,13 +195,15 @@ export class Renderer {
     this.roadCtx.clearRect(0, 0, w, h);
     state.road.render(this.roadCtx, w, h);
 
+    // LoD layer (distant biome previews)
+    this.envCtx.clearRect(0, 0, w, h);
+    if (state.lod) {
+      state.lod.render(this.envCtx, w, h);
+    }
+    
     // Mid-ground objects (Environment + Traffic)
     // We use trafficCtx (the topmost world layer) for combined rendering
-    this.envCtx.clearRect(0, 0, w, h);
     this.trafficCtx.clearRect(0, 0, w, h);
-
-    // Render distant biome previews first
-    state.environment.renderDistantBiomes(this.trafficCtx, w, h);
     
     const renderables = [];
     
