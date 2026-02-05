@@ -24,3 +24,38 @@ export function bilinearMap(q, u, v) {
     y: ty + (by - ty) * v
   };
 }
+
+/**
+ * Draw a 4-point quad (array of {x,y}) with current fillStyle.
+ */
+export function drawQuad(ctx, pts) {
+  if (!pts || pts.length < 4) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  ctx.lineTo(pts[1].x, pts[1].y);
+  ctx.lineTo(pts[2].x, pts[2].y);
+  ctx.lineTo(pts[3].x, pts[3].y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
+ * Render a soft radial glow centered at (x,y).
+ * strength: multiplier for alpha
+ * size: radius in pixels
+ */
+export function renderGlow(ctx, x, y, color, size, strength = 0.5) {
+  if (size <= 0) return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, size);
+  // color may be a hex; allow alpha stops
+  g.addColorStop(0, color);
+  g.addColorStop(0.5, color + Math.floor(150 * strength).toString(16).padStart(2, '0'));
+  g.addColorStop(1, color + '00');
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
