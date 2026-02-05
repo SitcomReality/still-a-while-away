@@ -6,9 +6,8 @@ import { renderBuilding } from './renderers/building.js';
 import { renderBush } from './renderers/bush.js';
 
 export class EnvironmentSystem {
-  constructor(road, lodSystem = null) {
+  constructor(road) {
     this.road = road;
-    this.lodSystem = lodSystem;
     this.features = [];
     this.nextFeatureDistance = 0;
   }
@@ -17,18 +16,8 @@ export class EnvironmentSystem {
     const viewDistance = CONST.ENV_VIEW_DISTANCE;
     
     while (this.nextFeatureDistance < this.road.distance + viewDistance) {
-      // Use LoD system to determine biome at this distance if available
-      const spawnBiome = this.lodSystem 
-        ? this.lodSystem.getBiomeAt(this.nextFeatureDistance)
-        : biome;
-      
-      const feature = Factory.spawnFeature(this.nextFeatureDistance, spawnBiome);
-      
-      // Track spawn distance for scaling
-      feature.spawnDistance = this.nextFeatureDistance;
-      
-      this.features.push(feature);
-      this.nextFeatureDistance += Factory.getSpacing(spawnBiome);
+      this.features.push(Factory.spawnFeature(this.nextFeatureDistance, biome));
+      this.nextFeatureDistance += Factory.getSpacing(biome);
     }
     
     this.features = this.features.filter(f => 
@@ -45,13 +34,7 @@ export class EnvironmentSystem {
     const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
     const y = pos.y;
     const scale = pos.scale;
-    
-    // Calculate growth scale based on how far the object has traveled since spawn
-    const traveledDistance = this.road.distance - (f.spawnDistance - relDist);
-    const growthDistance = 100; // Distance over which to grow from tiny to full size
-    const growthScale = Math.min(1, Math.max(0.1, traveledDistance / growthDistance));
-    
-    const renderScale = scale * CONST.ENV_GLOBAL_SCALE * growthScale;
+    const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
 
     switch (f.type) {
       case 'building':

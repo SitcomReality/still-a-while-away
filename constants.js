@@ -28,7 +28,7 @@ export const MARKING_WIDTH_SCALE = 40;   // Width multiplier based on perspectiv
 export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren't drawn
 
 // Environment & World
-export const ENV_VIEW_DISTANCE = 600;
+export const ENV_VIEW_DISTANCE = 500;
 export const ENV_REMOVAL_THRESHOLD = -20;
 export const ENV_GLOBAL_SCALE = 30;   // Size multiplier for trees/buildings
 

@@ -60,15 +60,14 @@ export class Renderer {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, horizonY);
     
-    // Draw Hills
-    this.renderHills(ctx, w, h, horizonY, heading, biome);
-
-    // Ground Plane (Behind everything)
-    ctx.fillStyle = biome.groundColor;
-    ctx.fillRect(0, horizonY, w, h - horizonY);
-
-    // Stars
+    // Stars (draw before ground/hills so they never appear in front of horizon)
     if (biome.stars > 0.01) {
+      ctx.save();
+      // Clip to sky area to guarantee no stars below horizon
+      ctx.beginPath();
+      ctx.rect(0, 0, w, horizonY);
+      ctx.clip();
+
       ctx.fillStyle = '#ffffff';
       const starSeed = 42; 
       for (let i = 0; i < 150; i++) {
@@ -77,10 +76,19 @@ export class Renderer {
         const twinkle = (Math.sin(time * 1.5 + i) * 0.5 + 0.5);
         ctx.globalAlpha = biome.stars * twinkle * 0.8;
         const size = (i % 5 === 0) ? 2 : 1;
+        // Use horizonY to map star vertical position, but clip enforces safety
         ctx.fillRect(Math.abs(x) * w, Math.abs(y) * horizonY, size, size);
       }
       ctx.globalAlpha = 1;
+      ctx.restore();
     }
+
+    // Draw Hills
+    this.renderHills(ctx, w, h, horizonY, heading, biome);
+
+    // Ground Plane (Behind everything)
+    ctx.fillStyle = biome.groundColor;
+    ctx.fillRect(0, horizonY, w, h - horizonY);
   }
 
   renderHills(ctx, w, h, horizonY, heading, biome) {
@@ -195,14 +203,9 @@ export class Renderer {
     this.roadCtx.clearRect(0, 0, w, h);
     state.road.render(this.roadCtx, w, h);
 
-    // LoD layer (distant biome previews)
-    this.envCtx.clearRect(0, 0, w, h);
-    if (state.lod) {
-      state.lod.render(this.envCtx, w, h);
-    }
-    
     // Mid-ground objects (Environment + Traffic)
     // We use trafficCtx (the topmost world layer) for combined rendering
+    this.envCtx.clearRect(0, 0, w, h);
     this.trafficCtx.clearRect(0, 0, w, h);
     
     const renderables = [];

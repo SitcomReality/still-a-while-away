@@ -5,18 +5,16 @@ import { EnvironmentSystem } from './environment.js';
 import { WeatherSystem } from './weather.js';
 import { WindshieldFX } from './windshield.js';
 import { BiomeManager } from './biomes.js';
-import { LoDSystem } from './lod/lod-system.js';
 
 class Game {
   constructor() {
     this.renderer = new Renderer();
     this.road = new RoadSystem();
-    this.biomes = new BiomeManager();
-    this.lod = new LoDSystem(this.road, this.biomes);
     this.traffic = new TrafficSystem(this.road);
-    this.environment = new EnvironmentSystem(this.road, this.lod);
+    this.environment = new EnvironmentSystem(this.road);
     this.weather = new WeatherSystem();
     this.windshield = new WindshieldFX(this.weather);
+    this.biomes = new BiomeManager();
     
     this.time = 0;
     this.lastTime = performance.now();
@@ -40,7 +38,6 @@ class Game {
     // Update systems
     this.biomes.update(dt, this.time);
     this.road.update(dt, this.biomes.current);
-    this.lod.update(dt);
     this.traffic.update(dt, this.biomes.current);
     this.environment.update(dt, this.biomes.current);
     this.weather.update(dt, this.biomes.current);
@@ -53,7 +50,6 @@ class Game {
       environment: this.environment,
       weather: this.weather,
       windshield: this.windshield,
-      lod: this.lod,
       biome: this.biomes.current,
       time: this.time
     });
