@@ -18,7 +18,15 @@ export function renderLightpole(ctx, x, y, scale, pole) {
   
   if (pole.hasLight) {
     const lightY = y - height + 2;
-    renderGlow(ctx, x, lightY, pole.lightColor, 40 * scale, 0.6);
+    const glowSize = 40 * scale;
+
+    ctx.save();
+    // Clip the light glow so it doesn't bleed below the pole's ground-level contact point (y)
+    ctx.beginPath();
+    ctx.rect(x - glowSize, lightY - glowSize, glowSize * 2, y - (lightY - glowSize));
+    ctx.clip();
+
+    renderGlow(ctx, x, lightY, pole.lightColor, glowSize, 0.6);
     
     // Bright core
     ctx.fillStyle = pole.lightColor;
@@ -27,5 +35,6 @@ export function renderLightpole(ctx, x, y, scale, pole) {
     ctx.arc(x, lightY, Math.max(1, 3 * scale), 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
 }
