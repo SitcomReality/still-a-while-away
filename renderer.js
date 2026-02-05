@@ -16,6 +16,7 @@ export class Renderer {
     };
 
     this.skyCanvas = document.getElementById('sky-layer');
+    this.shadowCanvas = document.getElementById('shadow-layer');
     this.envCanvas = document.getElementById('environment-layer');
     this.roadCanvas = document.getElementById('road-layer');
     this.trafficCanvas = document.getElementById('traffic-layer');
@@ -24,6 +25,7 @@ export class Renderer {
     this.uiCanvas = document.getElementById('ui-layer');
     
     this.skyCtx = this.skyCanvas.getContext('2d', { alpha: false });
+    this.shadowCtx = this.shadowCanvas.getContext('2d', { alpha: true });
     this.envCtx = this.envCanvas.getContext('2d', { alpha: true });
     this.roadCtx = this.roadCanvas.getContext('2d', { alpha: true });
     this.trafficCtx = this.trafficCanvas.getContext('2d', { alpha: true });
@@ -37,7 +39,7 @@ export class Renderer {
   
   resize() {
     const canvases = [
-      this.skyCanvas, this.envCanvas, this.roadCanvas,
+      this.skyCanvas, this.shadowCanvas, this.envCanvas, this.roadCanvas,
       this.trafficCanvas, this.weatherCanvas, this.windshieldCanvas, this.uiCanvas
     ];
     
@@ -189,6 +191,57 @@ export class Renderer {
     ctx.restore();
   }
 
+  renderShadow(ctx, w, h, f, road, lighting) {
+    if (lighting.isNightTime) return; // No shadows at night
+    
+    const relDist = f.distance - road.distance;
+    const pos = road.getRoadPosAt(relDist, w, h);
+    if (pos.scale <= 0) return;
+
+    const roadTangent = road.getCurveAt(relDist);
+    const objectHeading = roadTangent * 2;
+    const shadow = lighting.getShadowVector(objectHeading);
+    
+    const sideMultiplier = f.side === 'left' ? -1 : 1;
+    const baseX = pos.x + (w * f.offset * sideMultiplier * pos.scale);
+    const baseY = pos.y;
+    
+    let shadowWidth, shadowDepth;
+    
+    if (f.type === 'tree') {
+      shadowWidth = f.width * pos.scale * 30;
+      shadowDepth = f.height * pos.scale * 30;
+    } else if (f.type === 'building') {
+      shadowWidth = f.width * pos.scale * 30;
+      shadowDepth = f.height * pos.scale * 30;
+    } else if (f.type === 'lightpole') {
+      shadowWidth = 3 * pos.scale;
+      shadowDepth = f.height * pos.scale * 30;
+    } else {
+      return; // No shadow for other objects
+    }
+    
+    const shadowOffsetX = shadow.dx * shadowDepth;
+    const shadowOffsetZ = shadow.dz * shadowDepth;
+    
+    // Project shadow onto ground
+    const shadowEndDist = relDist + shadowOffsetZ;
+    const shadowEndPos = road.getRoadPosAt(shadowEndDist, w, h);
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.globalAlpha = 0.3;
+    
+    ctx.beginPath();
+    ctx.moveTo(baseX - shadowWidth/2, baseY);
+    ctx.lineTo(baseX + shadowWidth/2, baseY);
+    ctx.lineTo(shadowEndPos.x + shadowOffsetX + shadowWidth/2, shadowEndPos.y);
+    ctx.lineTo(shadowEndPos.x + shadowOffsetX - shadowWidth/2, shadowEndPos.y);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.globalAlpha = 1;
+  }
+
   render(state) {
     const w = this.skyCanvas.width;
     const h = this.skyCanvas.height;
@@ -202,6 +255,16 @@ export class Renderer {
     // Road layer
     this.roadCtx.clearRect(0, 0, w, h);
     state.road.render(this.roadCtx, w, h);
+
+    // Shadow layer (only during day)
+    this.shadowCtx.clearRect(0, 0, w, h);
+    if (!state.lighting.isNightTime) {
+      state.environment.features.forEach(f => {
+        if (f.distance - state.road.distance > 0 && f.distance - state.road.distance < 500) {
+          this.renderShadow(this.shadowCtx, w, h, f, state.road, state.lighting);
+        }
+      });
+    }
 
     // Mid-ground objects (Environment + Traffic)
     // We use trafficCtx (the topmost world layer) for combined rendering
@@ -239,7 +302,7 @@ export class Renderer {
     // Render sorted list
     renderables.forEach(item => {
       if (item.type === 'env') {
-        state.environment.renderFeature(this.trafficCtx, item.data, w, h);
+        state.environment.renderFeature(this.trafficCtx, item.data, w, h, state.lighting);
       } else {
         state.traffic.renderVehicle(this.trafficCtx, item.data, w, h);
       }

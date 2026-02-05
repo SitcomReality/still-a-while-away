@@ -5,6 +5,7 @@ import { EnvironmentSystem } from './environment.js';
 import { WeatherSystem } from './weather.js';
 import { WindshieldFX } from './windshield.js';
 import { BiomeManager } from './biomes.js';
+import { LightingSystem } from './lighting.js';
 
 class Game {
   constructor() {
@@ -15,6 +16,7 @@ class Game {
     this.weather = new WeatherSystem();
     this.windshield = new WindshieldFX(this.weather);
     this.biomes = new BiomeManager();
+    this.lighting = new LightingSystem();
     
     this.time = 0;
     this.lastTime = performance.now();
@@ -37,6 +39,7 @@ class Game {
     
     // Update systems
     this.biomes.update(dt, this.time);
+    this.lighting.update(this.biomes.current);
     this.road.update(dt, this.biomes.current);
     this.traffic.update(dt, this.biomes.current);
     this.environment.update(dt, this.biomes.current);
@@ -51,6 +54,7 @@ class Game {
       weather: this.weather,
       windshield: this.windshield,
       biome: this.biomes.current,
+      lighting: this.lighting,
       time: this.time
     });
     
