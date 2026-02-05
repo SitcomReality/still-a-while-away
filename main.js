@@ -25,8 +25,8 @@ class Game {
   }
   
   init() {
-    // Set initial biome
-    this.biomes.transitionTo(this.biomes.getRandomBiome());
+    // Set initial location randomly
+    this.biomes.currentLocation = this.biomes.locations[Math.floor(Math.random() * this.biomes.locations.length)];
     
     // Start game loop
     requestAnimationFrame((t) => this.loop(t));

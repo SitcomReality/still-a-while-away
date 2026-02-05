@@ -1,4 +1,4 @@
-import { lerp } from './utils.js';
+import { lerp, lerpColor } from './utils.js';
 
 export class BiomeManager {
   constructor() {
@@ -40,6 +40,27 @@ export class BiomeManager {
   }
 
   getInterpolatedState() {
+    const { s1, s2, t } = this._findTimeStates();
+    const skyColors = s1.colors.map((c, i) => 
+      lerpColor(c, s2.colors[i] || s2.colors[s2.colors.length - 1], t)
+    );
+    
+    return {
+      type: this.currentLocation,
+      timeValue: this.timeValue,
+      name: t < 0.5 ? s1.name : s2.name,
+      skyColors,
+      groundColor: lerpColor(s1.ground, s2.ground, t),
+      ambient: lerp(s1.ambient, s2.ambient, t),
+      stars: lerp(s1.stars, s2.stars, t),
+      weather: 'clear',
+      trafficDensity: this.currentLocation === 'city' ? 1.5 : 0.4,
+      hasStreetlights: this.currentLocation === 'city' || s1.name === 'night' || s2.name === 'night',
+      description: `${this.currentLocation} at ${s1.name}`
+    };
+  }
+
+  _findTimeStates() {
     let s1 = this.timeStates[0];
     let s2 = this.timeStates[this.timeStates.length - 1];
 
@@ -50,47 +71,7 @@ export class BiomeManager {
         break;
       }
     }
-
-    const t = (this.timeValue - s1.time) / (s2.time - s1.time);
-    
-    // Interpolate colors manually for simple hex transition
-    const lerpColor = (c1, c2, t) => {
-      const r1 = parseInt(c1.substring(1, 3), 16);
-      const g1 = parseInt(c1.substring(3, 5), 16);
-      const b1 = parseInt(c1.substring(5, 7), 16);
-      const r2 = parseInt(c2.substring(1, 3), 16);
-      const g2 = parseInt(c2.substring(3, 5), 16);
-      const b2 = parseInt(c2.substring(5, 7), 16);
-      const r = Math.round(lerp(r1, r2, t)).toString(16).padStart(2, '0');
-      const g = Math.round(lerp(g1, g2, t)).toString(16).padStart(2, '0');
-      const b = Math.round(lerp(b1, b2, t)).toString(16).padStart(2, '0');
-      return `#${r}${g}${b}`;
-    };
-
-    const colors = s1.colors.map((c, i) => lerpColor(c, s2.colors[i] || s2.colors[s2.colors.length-1], t));
-    
-    return {
-      type: this.currentLocation,
-      timeValue: this.timeValue,
-      name: t < 0.5 ? s1.name : s2.name,
-      skyColors: colors,
-      groundColor: lerpColor(s1.ground, s2.ground, t),
-      ambient: lerp(s1.ambient, s2.ambient, t),
-      stars: lerp(s1.stars, s2.stars, t),
-      weather: 'clear', // Dynamic weather could be added here
-      trafficDensity: this.currentLocation === 'city' ? 1.5 : 0.4,
-      hasStreetlights: this.currentLocation === 'city' || s1.name === 'night' || s2.name === 'night',
-      description: `${this.currentLocation} at ${s1.name}`
-    };
-  }
-  
-  transitionTo(biome) {
-    // Kept for compatibility, though we use timeValue now
-    console.log(`Setting location to: ${biome.type}`);
-    this.currentLocation = biome.type;
-  }
-
-  getRandomBiome() {
-    return { type: this.locations[Math.floor(Math.random() * this.locations.length)] };
+    const t = (this.timeValue - s1.time) / (s2.time - s1.time || 1);
+    return { s1, s2, t };
   }
 }
