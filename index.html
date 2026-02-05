@@ -45,6 +45,82 @@
       pointer-events: none;
       z-index: 110;
     }
+
+    /* Dev Menu Styles */
+    #dev-menu-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      pointer-events: none;
+    }
+
+    #dev-toggle {
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid #444;
+      color: #0f0;
+      padding: 5px 10px;
+      cursor: pointer;
+      pointer-events: auto;
+      margin-bottom: 5px;
+      border-radius: 4px;
+    }
+
+    #dev-panel {
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid #444;
+      padding: 10px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      width: 220px;
+      pointer-events: auto;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    #dev-panel.active {
+      display: flex;
+    }
+
+    .dev-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dev-row label {
+      flex: 1;
+    }
+
+    .dev-row input[type="range"] {
+      flex: 1.5;
+      height: 4px;
+      background: #444;
+      outline: none;
+    }
+
+    .dev-row select, .dev-row button {
+      background: #222;
+      color: #fff;
+      border: 1px solid #555;
+      font-family: inherit;
+      font-size: 10px;
+      padding: 2px 4px;
+    }
+
+    .dev-stats {
+      border-top: 1px solid #333;
+      padding-top: 5px;
+      margin-top: 5px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
@@ -57,6 +133,42 @@
     <canvas id="windshield-layer"></canvas>
     <canvas id="ui-layer"></canvas>
     <img id="cabin-overlay" src="/car_cabin_overlay.png" alt="">
+    
+    <div id="dev-menu-container">
+      <button id="dev-toggle">DEV TOOLS</button>
+      <div id="dev-panel">
+        <div class="dev-row">
+          <label>Time</label>
+          <input type="range" id="dev-time" min="0" max="1" step="0.01">
+        </div>
+        <div class="dev-row">
+          <label>Speed</label>
+          <input type="range" id="dev-speed" min="0" max="100" step="1">
+        </div>
+        <div class="dev-row">
+          <label>Weather</label>
+          <select id="dev-weather">
+            <option value="clear">Clear</option>
+            <option value="rain">Rain</option>
+            <option value="fog">Fog</option>
+          </select>
+        </div>
+        <div class="dev-row">
+          <label>Location</label>
+          <select id="dev-location">
+            <option value="city">City</option>
+            <option value="rural">Rural</option>
+          </select>
+        </div>
+        <div class="dev-row">
+          <label>Traffic</label>
+          <input type="range" id="dev-traffic" min="0" max="5" step="0.1">
+        </div>
+        <div class="dev-stats" id="dev-stats">
+          FPS: 00 | Pos: 0.00
+        </div>
+      </div>
+    </div>
   </div>
   
   <script type="module" src="./main.js"></script>

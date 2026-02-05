@@ -5,6 +5,7 @@ import { EnvironmentSystem } from './environment.js';
 import { WeatherSystem } from './weather.js';
 import { WindshieldFX } from './windshield.js';
 import { BiomeManager } from './biomes.js';
+import { DevMenu } from './dev-menu.js';
 
 class Game {
   constructor() {
@@ -15,6 +16,7 @@ class Game {
     this.weather = new WeatherSystem();
     this.windshield = new WindshieldFX(this.weather);
     this.biomes = new BiomeManager();
+    this.devMenu = new DevMenu(this);
     
     this.time = 0;
     this.lastTime = performance.now();
@@ -42,6 +44,7 @@ class Game {
     this.environment.update(dt, this.biomes.current);
     this.weather.update(dt, this.biomes.current);
     this.windshield.update(dt);
+    this.devMenu.update(dt);
     
     // Render layers
     this.renderer.render({
