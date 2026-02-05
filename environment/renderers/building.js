@@ -1,7 +1,7 @@
 import * as CONST from '../../constants.js';
 import { adjustBrightness, bilinearMap } from './utils.js';
 
-export function renderBuilding(ctx, w, h, f, road, lightDir, inShadow) {
+export function renderBuilding(ctx, w, h, f, road) {
   const relDist = f.distance - road.distance;
   const depth = f.depth || 30;
   
@@ -39,8 +39,7 @@ export function renderBuilding(ctx, w, h, f, road, lightDir, inShadow) {
   const br = cxFar + wFar / 2;
   const bt = yFar - hFar;
   
-  const shadowAdjust = inShadow ? -40 : -20;
-  ctx.fillStyle = adjustBrightness(f.color, shadowAdjust);
+  ctx.fillStyle = adjustBrightness(f.color, -20);
   ctx.beginPath();
   
   let sideQuad = [];
@@ -57,7 +56,7 @@ export function renderBuilding(ctx, w, h, f, road, lightDir, inShadow) {
   renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
 
   if (zNear > 0.5) {
-    ctx.fillStyle = inShadow ? adjustBrightness(f.color, -30) : f.color;
+    ctx.fillStyle = f.color;
     ctx.fillRect(fl, ft, wNear, hNear);
     
     // Front Windows - Render using relative offsets to stay within building bounds

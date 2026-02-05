@@ -75,9 +75,9 @@ export class TrafficSystem {
     ctx.fill();
   }
 
-  renderVehicle(ctx, v, w, h, lightDir, inShadow) {
+  renderVehicle(ctx, v, w, h) {
     if (v.distance < 250) {
-      this.renderVehicle3D(ctx, w, h, v, lightDir, inShadow);
+      this.renderVehicle3D(ctx, w, h, v);
     } else {
       const pos = this.road.getRoadPosAt(v.distance, w, h);
       if (pos.scale <= 0) return;
@@ -116,7 +116,7 @@ export class TrafficSystem {
 
       const dimFactor = Math.abs(curveDelta) > 0.05 ? 0.3 : 1.0;
       
-      this.renderVehicleSilhouette(ctx, q, v, lightDir, inShadow);
+      this.renderVehicleSilhouette(ctx, q, v);
       this.renderLights(ctx, q, v, dimFactor);
     }
   }
@@ -124,7 +124,7 @@ export class TrafficSystem {
   // Obsolete - functionality moved to Renderer unified depth sort
   render(ctx, w, h) {}
 
-  renderVehicle3D(ctx, w, h, v, lightDir, inShadow) {
+  renderVehicle3D(ctx, w, h, v) {
     const zNear = Math.max(0.1, v.distance);
     const zFar = v.distance + v.depth;
     
@@ -149,25 +149,22 @@ export class TrafficSystem {
     const farQuad = [fbl, fbr, ftr, ftl];
 
     // Far Face
-    const shadowAdjust = inShadow ? -60 : -40;
-    ctx.fillStyle = adjustBrightness(v.color, shadowAdjust);
+    ctx.fillStyle = adjustBrightness(v.color, -40);
     this.drawQuad(ctx, farQuad);
 
     // Side Surfaces
-    const sideAdjust = inShadow ? -40 : -20;
-    ctx.fillStyle = adjustBrightness(v.color, sideAdjust);
+    ctx.fillStyle = adjustBrightness(v.color, -20);
     if (nbl.x > fbl.x) this.drawQuad(ctx, [nbl, fbl, ftl, ntl]);
     if (nbr.x < fbr.x) this.drawQuad(ctx, [nbr, fbr, ftr, ntr]);
 
     // Top Surface
     if (ntl.y > ftl.y) {
-      const topAdjust = inShadow ? -10 : 10;
-      ctx.fillStyle = adjustBrightness(v.color, topAdjust);
+      ctx.fillStyle = adjustBrightness(v.color, 10);
       this.drawQuad(ctx, [ntl, ntr, ftr, ftl]);
     }
 
     // Near Face
-    this.renderVehicleSilhouette(ctx, nearQuad, v, lightDir, inShadow);
+    this.renderVehicleSilhouette(ctx, nearQuad, v);
 
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
@@ -219,7 +216,7 @@ export class TrafficSystem {
     ctx.globalAlpha = 1;
   }
   
-  renderVehicleSilhouette(ctx, quad, vehicle, lightDir, inShadow) {
+  renderVehicleSilhouette(ctx, quad, vehicle) {
     const scale = quad[0].scale;
     const size = CONST.TRAFFIC_SIZE_SCALE * scale;
     if (size < 4) return;
@@ -232,7 +229,7 @@ export class TrafficSystem {
     ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
 
     // Car body (Perspective-correct near face)
-    ctx.fillStyle = inShadow ? adjustBrightness(vehicle.color, -30) : vehicle.color;
+    ctx.fillStyle = vehicle.color;
     this.drawQuad(ctx, quad);
     
     // Windshield / Windows - Mapped within the quad face
