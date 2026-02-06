@@ -25,7 +25,7 @@ export class EnvironmentSystem {
     );
   }
   
-  renderFeature(ctx, f, w, h, sunPos) {
+  renderFeature(ctx, f, w, h) {
     const relDist = f.distance - this.road.distance;
     const pos = this.road.getRoadPosAt(relDist, w, h);
     if (pos.scale <= 0) return;
@@ -35,14 +35,13 @@ export class EnvironmentSystem {
     const y = pos.y;
     const scale = pos.scale;
     const renderScale = scale * CONST.ENV_GLOBAL_SCALE;
-    const visualHeading = this.road.getVisualHeadingAt(relDist);
 
     switch (f.type) {
       case 'building':
         renderBuilding(ctx, w, h, f, this.road);
         break;
       case 'tree':
-        renderTree(ctx, x, y, renderScale, f, sunPos, visualHeading);
+        renderTree(ctx, x, y, renderScale, f);
         break;
       case 'lightpole':
         renderLightpole(ctx, x, y, renderScale, f);

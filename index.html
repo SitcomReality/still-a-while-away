@@ -127,7 +127,6 @@
   <div id="game-container">
     <canvas id="sky-layer"></canvas>
     <canvas id="road-layer"></canvas>
-    <canvas id="shadow-layer"></canvas>
     <canvas id="environment-layer"></canvas>
     <canvas id="traffic-layer"></canvas>
     <canvas id="weather-layer"></canvas>
@@ -164,6 +163,10 @@
         <div class="dev-row">
           <label>Traffic</label>
           <input type="range" id="dev-traffic" min="0" max="5" step="0.1">
+        </div>
+        <div class="dev-row">
+          <label>Debug View</label>
+          <input type="checkbox" id="dev-debug-view">
         </div>
         <div class="dev-stats" id="dev-stats">
           FPS: 00 | Pos: 0.00

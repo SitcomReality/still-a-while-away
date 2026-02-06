@@ -52,7 +52,8 @@ class Game {
     renderer.render({
       road, traffic, environment, weather, windshield,
       biome: biomes.current,
-      time: this.time
+      time: this.time,
+      debug: devMenu.showDebugLines
     });
     
     requestAnimationFrame((t) => this.loop(t));

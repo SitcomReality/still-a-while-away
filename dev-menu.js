@@ -13,9 +13,11 @@ export class DevMenu {
       weather: document.getElementById('dev-weather'),
       location: document.getElementById('dev-location'),
       traffic: document.getElementById('dev-traffic'),
+      debugView: document.getElementById('dev-debug-view'),
       stats: document.getElementById('dev-stats')
     };
 
+    this.showDebugLines = false;
     this.init();
   }
 
@@ -45,6 +47,10 @@ export class DevMenu {
     this.elements.traffic.addEventListener('input', (e) => {
       // Direct override for density
       this.game.biomes.current.trafficDensity = parseFloat(e.target.value);
+    });
+
+    this.elements.debugView.addEventListener('change', (e) => {
+      this.showDebugLines = e.target.checked;
     });
 
     // Sync initial state
