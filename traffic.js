@@ -66,18 +66,20 @@ export class TrafficSystem {
   }
 
   renderVehicle(ctx, v, w, h) {
+    const fadeScale = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
+    
     if (v.distance < 250) {
-      this.renderVehicle3D(ctx, w, h, v);
+      this.renderVehicle3D(ctx, w, h, v, fadeScale);
     } else {
-      this.renderVehicleLOD(ctx, w, h, v);
+      this.renderVehicleLOD(ctx, w, h, v, fadeScale);
     }
   }
 
-  renderVehicleLOD(ctx, w, h, v) {
+  renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0) {
     const pos = this.road.getRoadPosAt(v.distance, w, h);
     if (pos.scale <= 0) return;
     
-    const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale;
+    const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale * fadeScale;
     const width = size * 1.4;
     const height = size * 0.7 * v.height;
     const currentRoadWidth = w * this.road.roadWidth * pos.scale;
@@ -105,26 +107,27 @@ export class TrafficSystem {
     this.renderLights(ctx, q, v, dimFactor);
   }
 
-  renderVehicle3D(ctx, w, h, v) {
+  renderVehicle3D(ctx, w, h, v, fadeScale = 1.0) {
     const zNear = Math.max(0.1, v.distance);
     const zFar = v.distance + v.depth;
     
     const roadW = this.road.roadWidth;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
-    const carWidth = 0.5; 
+    const carWidth = 0.5 * fadeScale; 
+    const carHeight = v.height * fadeScale;
 
     const lOff = laneOffset - carWidth/2;
     const rOff = laneOffset + carWidth/2;
 
     const nbl = this.getProjectedPoint(zNear, lOff, 0, w, h);
     const nbr = this.getProjectedPoint(zNear, rOff, 0, w, h);
-    const ntl = this.getProjectedPoint(zNear, lOff, v.height, w, h);
-    const ntr = this.getProjectedPoint(zNear, rOff, v.height, w, h);
+    const ntl = this.getProjectedPoint(zNear, lOff, carHeight, w, h);
+    const ntr = this.getProjectedPoint(zNear, rOff, carHeight, w, h);
     
     const fbl = this.getProjectedPoint(zFar, lOff, 0, w, h);
     const fbr = this.getProjectedPoint(zFar, rOff, 0, w, h);
-    const ftl = this.getProjectedPoint(zFar, lOff, v.height, w, h);
-    const ftr = this.getProjectedPoint(zFar, rOff, v.height, w, h);
+    const ftl = this.getProjectedPoint(zFar, lOff, carHeight, w, h);
+    const ftr = this.getProjectedPoint(zFar, rOff, carHeight, w, h);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
     

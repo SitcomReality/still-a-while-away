@@ -31,6 +31,7 @@ export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren'
 export const ENV_VIEW_DISTANCE = 500;
 export const ENV_REMOVAL_THRESHOLD = -20;
 export const ENV_GLOBAL_SCALE = 30;   // Size multiplier for trees/buildings
+export const FADE_IN_DISTANCE = 50;   // Distance over which objects "grow" in
 
 // Traffic
 export const TRAFFIC_RENDER_LIMIT = 500;

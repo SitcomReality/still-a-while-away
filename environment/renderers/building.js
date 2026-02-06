@@ -1,7 +1,7 @@
 import * as CONST from '../../constants.js';
 import { adjustBrightness, bilinearMap, drawQuad } from './utils.js';
 
-export function renderBuilding(ctx, w, h, f, road) {
+export function renderBuilding(ctx, w, h, f, road, fadeScale = 1.0) {
   const relDist = f.distance - road.distance;
   const depth = f.depth || 30;
   const zNear = relDist - depth / 2;
@@ -20,10 +20,10 @@ export function renderBuilding(ctx, w, h, f, road) {
   const cxFar = posFar.x + xOffsetFar;
 
   const dims = {
-    wNear: f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale,
-    wFar: f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale,
-    hNear: f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale,
-    hFar: f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale,
+    wNear: f.width * CONST.ENV_GLOBAL_SCALE * posNear.scale * fadeScale,
+    wFar: f.width * CONST.ENV_GLOBAL_SCALE * posFar.scale * fadeScale,
+    hNear: f.height * CONST.ENV_GLOBAL_SCALE * posNear.scale * fadeScale,
+    hFar: f.height * CONST.ENV_GLOBAL_SCALE * posFar.scale * fadeScale,
     yNear: posNear.y,
     yFar: posFar.y,
     cxNear,
