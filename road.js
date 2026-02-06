@@ -137,42 +137,50 @@ export class RoadSystem {
   
   renderMarkings(ctx, w, h) {
     const { roadWidth } = this;
+    const dashLength = CONST.MARKING_DASH_LENGTH;
+    
     this.markings.forEach(m => {
-      const pos = this.getRoadPosAt(m.distance, w, h);
+      // Allow rendering slightly behind camera to ensure smooth exit
+      if (m.distance > CONST.MARKING_RENDER_LIMIT || m.distance < -dashLength) return;
+
+      const posNear = this.getRoadPosAt(m.distance, w, h);
+      const posFar = this.getRoadPosAt(m.distance + dashLength, w, h);
       
-      if (pos.scale <= 0 || m.distance > CONST.MARKING_RENDER_LIMIT) return;
+      if (posNear.scale <= 0 || posFar.scale <= 0) return;
       
-      const baseWidth = w * roadWidth;
-      const currentWidth = baseWidth * pos.scale;
-      const laneOffset = (m.offset || 0) * currentWidth;
+      const wNear = Math.max(0.5, CONST.MARKING_WIDTH_SCALE * posNear.scale);
+      const wFar = Math.max(0.5, CONST.MARKING_WIDTH_SCALE * posFar.scale);
       
-      const delta = 1.0; 
-      const posNext = this.getRoadPosAt(m.distance + delta, w, h);
-      
-      const dx = posNext.x - pos.x;
-      const dy = posNext.y - pos.y;
-      const angle = Math.atan2(dy, dx);
-      
-      const lineWidth = Math.max(1, CONST.MARKING_WIDTH_SCALE * pos.scale);
-      const segmentLength = CONST.MARKING_LENGTH_SCALE * pos.scale;
-      
-      // Use setTransform to avoid save/restore stack overhead for high-frequency calls
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      ctx.setTransform(cos, sin, -sin, cos, pos.x + laneOffset, pos.y);
-      
-      // Marking with slight glow
-      ctx.fillStyle = '#f5f5dc';
-      ctx.globalAlpha = 0.8 * Math.min(1, pos.scale + 0.3);
-      ctx.fillRect(0, -lineWidth / 2, segmentLength, lineWidth);
-      
-      // Subtle glow
+      const laneOffsetNear = (m.offset || 0) * (w * roadWidth * posNear.scale);
+      const laneOffsetFar = (m.offset || 0) * (w * roadWidth * posFar.scale);
+
+      const x1 = posNear.x + laneOffsetNear - wNear / 2;
+      const x2 = posNear.x + laneOffsetNear + wNear / 2;
+      const x3 = posFar.x + laneOffsetFar + wFar / 2;
+      const x4 = posFar.x + laneOffsetFar - wFar / 2;
+
+      // Glow first
+      const glowW = 1.5;
       ctx.fillStyle = '#fffacd';
-      ctx.globalAlpha = 0.25 * Math.min(1, pos.scale);
-      ctx.fillRect(0, -lineWidth / 2 - 1, segmentLength, lineWidth + 2);
+      ctx.globalAlpha = 0.25 * Math.min(1, posNear.scale);
+      ctx.beginPath();
+      ctx.moveTo(x1 - glowW, posNear.y);
+      ctx.lineTo(x2 + glowW, posNear.y);
+      ctx.lineTo(x3 + glowW, posFar.y);
+      ctx.lineTo(x4 - glowW, posFar.y);
+      ctx.fill();
+
+      // Dash Core
+      ctx.fillStyle = '#f5f5dc';
+      ctx.globalAlpha = 0.8 * Math.min(1, posNear.scale + 0.3);
+      ctx.beginPath();
+      ctx.moveTo(x1, posNear.y);
+      ctx.lineTo(x2, posNear.y);
+      ctx.lineTo(x3, posFar.y);
+      ctx.lineTo(x4, posFar.y);
+      ctx.fill();
     });
-    // Reset transform to identity
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    
     ctx.globalAlpha = 1;
   }
   

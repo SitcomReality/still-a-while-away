@@ -23,7 +23,7 @@ export const SLOPE_NOISE_AMP = 0.1;
 // Road Markings
 export const MARKING_SPACING = 32;     // Distance between dashes
 export const MARKING_BATCH_SIZE = 50; // Pre-generated marking count
-export const MARKING_LENGTH_SCALE = 120; // Length multiplier based on perspective
+export const MARKING_DASH_LENGTH = 8;    // Physical length of the dash in world space
 export const MARKING_WIDTH_SCALE = 40;   // Width multiplier based on perspective
 export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren't drawn
 
