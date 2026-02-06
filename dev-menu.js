@@ -41,7 +41,8 @@ export class DevMenu {
     });
 
     this.elements.location.addEventListener('change', (e) => {
-      this.game.biomes.currentLocation = e.target.value;
+      const idx = this.game.biomes.biomeTypes.findIndex(b => b.id === e.target.value);
+      if (idx >= 0) this.game.biomes.currentBiomeIndex = idx;
     });
 
     this.elements.traffic.addEventListener('input', (e) => {
@@ -57,7 +58,7 @@ export class DevMenu {
     this.elements.time.value = this.game.biomes.timeValue;
     this.elements.speed.value = this.game.road.speed;
     this.elements.weather.value = this.game.weather.type;
-    this.elements.location.value = this.game.biomes.currentLocation;
+    this.elements.location.value = this.game.biomes.biomeTypes[this.game.biomes.currentBiomeIndex].id;
   }
 
   update(dt) {

@@ -6,9 +6,14 @@ export class BiomeManager {
     this.timeValue = 0.8; // Start at evening
     this.timeScale = 0.005; // Progression speed
     
-    this.locations = ['city', 'rural'];
-    this.currentLocation = 'city';
-    this.nextLocationChange = 60 + Math.random() * 60;
+    this.biomeTypes = [
+      { id: 'city', treeDensity: 0.1, buildingDensity: 0.8, streetlightSpacing: 25, farmChance: 0 },
+      { id: 'suburbs', treeDensity: 0.3, buildingDensity: 0.4, streetlightSpacing: 40, farmChance: 0.1 },
+      { id: 'plains', treeDensity: 0.2, buildingDensity: 0.05, streetlightSpacing: 0, farmChance: 0.3 },
+      { id: 'forest', treeDensity: 0.9, buildingDensity: 0, streetlightSpacing: 0, farmChance: 0 }
+    ];
+    this.currentBiomeIndex = 0;
+    this.nextBiomeChange = 60 + Math.random() * 60;
 
     // Define sky/lighting states for time of day
     this.timeStates = [
@@ -28,11 +33,12 @@ export class BiomeManager {
     // Update time
     this.timeValue = (this.timeValue + this.timeScale * dt) % 1.0;
     
-    // Update location
-    this.nextLocationChange -= dt;
-    if (this.nextLocationChange <= 0) {
-      this.currentLocation = this.locations[Math.floor(Math.random() * this.locations.length)];
-      this.nextLocationChange = 60 + Math.random() * 60;
+    // Biome transitions (can move forward or backward along spectrum)
+    this.nextBiomeChange -= dt;
+    if (this.nextBiomeChange <= 0) {
+      const change = Math.random() > 0.5 ? 1 : -1;
+      this.currentBiomeIndex = Math.max(0, Math.min(this.biomeTypes.length - 1, this.currentBiomeIndex + change));
+      this.nextBiomeChange = 60 + Math.random() * 60;
     }
 
     // Refresh state
@@ -49,8 +55,11 @@ export class BiomeManager {
       lerpColor(c, s2.colors[i] || s2.colors[s2.colors.length - 1], t)
     );
     
+    const biome = this.biomeTypes[this.currentBiomeIndex];
+    const trafficByType = { city: 1.5, suburbs: 0.8, plains: 0.3, forest: 0.2 };
+    
     return {
-      type: this.currentLocation,
+      type: biome.id,
       timeValue: this.timeValue,
       name: t < 0.5 ? s1.name : s2.name,
       skyColors,
@@ -58,9 +67,13 @@ export class BiomeManager {
       ambient: lerp(s1.ambient, s2.ambient, t),
       stars: lerp(s1.stars, s2.stars, t),
       weather: 'clear',
-      trafficDensity: this.currentLocation === 'city' ? 1.5 : 0.4,
-      hasStreetlights: this.currentLocation === 'city' || s1.name === 'night' || s2.name === 'night',
-      description: `${this.currentLocation} at ${s1.name}`
+      trafficDensity: trafficByType[biome.id] || 0.5,
+      treeDensity: biome.treeDensity,
+      buildingDensity: biome.buildingDensity,
+      streetlightSpacing: biome.streetlightSpacing,
+      farmChance: biome.farmChance,
+      hasStreetlights: biome.streetlightSpacing > 0,
+      description: `${biome.id} at ${s1.name}`
     };
   }
 

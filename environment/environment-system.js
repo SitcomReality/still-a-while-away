@@ -16,6 +16,21 @@ export class EnvironmentSystem {
     const viewDistance = CONST.ENV_VIEW_DISTANCE;
     
     while (this.nextFeatureDistance < this.road.distance + viewDistance) {
+      // Regular streetlights
+      if (Factory.shouldSpawnStreetlight(this.nextFeatureDistance, biome)) {
+        const side = Math.floor(this.nextFeatureDistance / biome.streetlightSpacing) % 2 === 0 ? 'left' : 'right';
+        this.features.push({
+          distance: this.nextFeatureDistance,
+          type: 'lightpole',
+          side,
+          offset: 1.2,
+          height: 25,
+          hasLight: true,
+          lightColor: '#fff8e1'
+        });
+      }
+      
+      // Regular features
       this.features.push(Factory.spawnFeature(this.nextFeatureDistance, biome));
       this.nextFeatureDistance += Factory.getSpacing(biome);
     }
@@ -39,19 +54,14 @@ export class EnvironmentSystem {
     const scale = pos.scale;
     const renderScale = scale * CONST.ENV_GLOBAL_SCALE * fadeFactor;
 
-    switch (f.type) {
-      case 'building':
-        renderBuilding(ctx, w, h, f, this.road, fadeFactor);
-        break;
-      case 'tree':
-        renderTree(ctx, x, y, renderScale, f);
-        break;
-      case 'lightpole':
-        renderLightpole(ctx, x, y, renderScale, f);
-        break;
-      case 'bush':
-        renderBush(ctx, x, y, renderScale, f);
-        break;
+    if (f.type.startsWith('building_') || f.buildingType) {
+      renderBuilding(ctx, w, h, f, this.road, fadeFactor);
+    } else if (f.type === 'tree') {
+      renderTree(ctx, x, y, renderScale, f);
+    } else if (f.type === 'lightpole') {
+      renderLightpole(ctx, x, y, renderScale, f);
+    } else if (f.type === 'bush') {
+      renderBush(ctx, x, y, renderScale, f);
     }
   }
 
