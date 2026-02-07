@@ -31,7 +31,20 @@ export class EnvironmentSystem {
       }
       
       // Regular features
-      this.features.push(Factory.spawnFeature(this.nextFeatureDistance, biome));
+      const feat = Factory.spawnFeature(this.nextFeatureDistance, biome);
+
+      // Prevent large buildings from spawning so close that they intrude onto the road.
+      // Ensure offset is at least half the road width + half the building width + small margin.
+      if ((feat.type && feat.type.startsWith && feat.type.startsWith('building_')) || feat.buildingType) {
+        const halfRoad = CONST.ROAD_WIDTH / 2;
+        const bHalfWidth = (feat.width || 0) / 2;
+        const minOffset = halfRoad + bHalfWidth + 1.0; // 1m safety margin
+        if (feat.offset === undefined || feat.offset < minOffset) {
+          feat.offset = minOffset;
+        }
+      }
+
+      this.features.push(feat);
       this.nextFeatureDistance += Factory.getSpacing(biome);
     }
     
