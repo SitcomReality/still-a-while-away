@@ -58,10 +58,12 @@ export function getFeatureProps(type, biome) {
     const subtype = type.split('_')[1];
     return getBuildingProps(subtype);
   } else if (type === 'bush') {
+    // Make bushes compact and shrub-like relative to trees
+    const bushColors = ['#153815', '#1a2a1a', '#254226'];
     return {
-      height: 5 + Math.random() * 5,
-      width: 8 + Math.random() * 8,
-      color: '#1a2a1a'
+      height: 1 + Math.random() * 1.5,   // meters
+      width: 2 + Math.random() * 2,      // meters
+      color: bushColors[Math.floor(Math.random() * bushColors.length)]
     };
   }
   return {};
