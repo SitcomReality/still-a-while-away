@@ -138,14 +138,14 @@ export function spawnFeature(distance, biome) {
   const props = getFeatureProps(type, biome);
 
   // Offset in meters from center
-  let baseOffset = 7.0; 
+  let baseOffset = 10.0; 
   if (type.startsWith('building_')) {
     const subtype = type.split('_')[1];
     // Push skyscrapers and other very large building types further from the road edge
-    baseOffset = subtype === 'farm' ? 25.0 : subtype === 'skyscraper' ? 30.0 : 12.0;
+    baseOffset = subtype === 'farm' ? 40.0 : subtype === 'skyscraper' ? 50.0 : 20.0;
   }
-  if (type === 'tree') baseOffset = 6.0;
-  if (type === 'bush') baseOffset = 5.5;
+  if (type === 'tree') baseOffset = 10.0;
+  if (type === 'bush') baseOffset = 9.0;
 
   return {
     distance,
