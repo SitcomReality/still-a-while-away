@@ -52,25 +52,35 @@ export class RoadSystem {
     return h * (CONST.HORIZON_BASE_Y + this.slope * CONST.HORIZON_SLOPE_FACTOR);
   }
 
-  getRoadPosAt(distance, screenW, screenH) {
+  /**
+   * Projects a world distance into screen coordinates.
+   * @param {number} distance - Distance from camera in meters.
+   * @param {number} screenW - Canvas width.
+   * @param {number} screenH - Canvas height.
+   * @param {number} [curveRefDistance] - Optional anchor distance to use for curvature calculation (prevents rigid objects from shearing).
+   */
+  getRoadPosAt(distance, screenW, screenH, curveRefDistance = distance) {
     const horizon = this.getHorizon(screenH);
     
     // Perspective-correct projection: y is proportional to 1/z
     const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
-    
-    // Y Position mapped to the 3/4 landscape height
     const y = horizon + (screenH - horizon) * progress;
     
-    // VANISHING POINT AND BOTTOM ANCHOR
+    // VANISHING POINT AND BOTTOM ANCHOR (Camera offset)
     const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
-    
     let centerX = straightX;
     
+    // Use the reference distance to determine the "world" curvature this object is following.
+    // This is vital for rigid objects spanning multiple distances (like buildings).
+    const refProgress = CONST.PERSPECTIVE_K / (curveRefDistance + CONST.PERSPECTIVE_K);
+
     // HORIZONTAL CURVATURE
-    if (progress < 0.5) {
+    if (refProgress < 0.5) {
+      // The fade factor determines how much the curve 'unfolds' as it approaches the straight foreground.
+      // For rigidity, we use the specific point's progress for fading, but the reference's target curve.
       const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
       const currentCurve = this.getCurveAt(0);
-      const targetCurve = this.getCurveAt(distance);
+      const targetCurve = this.getCurveAt(curveRefDistance);
       
       const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
       centerX += curveOffset * curveFade;

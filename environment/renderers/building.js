@@ -9,8 +9,9 @@ export function renderBuilding(ctx, w, h, f, road, fadeScale = 1.0) {
   if (zFar < 1) return;
 
   const effZNear = Math.max(1, zNear);
-  const posNear = road.getRoadPosAt(effZNear, w, h);
-  const posFar = road.getRoadPosAt(zFar, w, h);
+  // Use effZNear as a curve reference for both points to keep the building rigid
+  const posNear = road.getRoadPosAt(effZNear, w, h, effZNear);
+  const posFar = road.getRoadPosAt(zFar, w, h, effZNear);
   if (posNear.scale <= 0 || posFar.scale <= 0) return;
 
   const sideSign = f.side === 'left' ? -1 : 1;

@@ -58,8 +58,8 @@ export class TrafficSystem {
     return colors[Math.floor(Math.random() * colors.length)];
   }
   
-  getProjectedPoint(dist, offset, height, w, h) {
-    const pos = this.road.getRoadPosAt(dist, w, h);
+  getProjectedPoint(dist, offset, height, w, h, curveRef = dist) {
+    const pos = this.road.getRoadPosAt(dist, w, h, curveRef);
     const x = pos.x + (offset * w * pos.scale);
     const y = pos.y - (height * CONST.TRAFFIC_SIZE_SCALE * 0.7 * pos.scale);
     return { x, y, scale: pos.scale };
@@ -119,15 +119,16 @@ export class TrafficSystem {
     const lOff = laneOffset - carWidth/2;
     const rOff = laneOffset + carWidth/2;
 
-    const nbl = this.getProjectedPoint(zNear, lOff, 0, w, h);
-    const nbr = this.getProjectedPoint(zNear, rOff, 0, w, h);
-    const ntl = this.getProjectedPoint(zNear, lOff, carHeight, w, h);
-    const ntr = this.getProjectedPoint(zNear, rOff, carHeight, w, h);
+    // Use zNear as the curvature reference for all 8 points to maintain vehicle rigidity
+    const nbl = this.getProjectedPoint(zNear, lOff, 0, w, h, zNear);
+    const nbr = this.getProjectedPoint(zNear, rOff, 0, w, h, zNear);
+    const ntl = this.getProjectedPoint(zNear, lOff, carHeight, w, h, zNear);
+    const ntr = this.getProjectedPoint(zNear, rOff, carHeight, w, h, zNear);
     
-    const fbl = this.getProjectedPoint(zFar, lOff, 0, w, h);
-    const fbr = this.getProjectedPoint(zFar, rOff, 0, w, h);
-    const ftl = this.getProjectedPoint(zFar, lOff, carHeight, w, h);
-    const ftr = this.getProjectedPoint(zFar, rOff, carHeight, w, h);
+    const fbl = this.getProjectedPoint(zFar, lOff, 0, w, h, zNear);
+    const fbr = this.getProjectedPoint(zFar, rOff, 0, w, h, zNear);
+    const ftl = this.getProjectedPoint(zFar, lOff, carHeight, w, h, zNear);
+    const ftr = this.getProjectedPoint(zFar, rOff, carHeight, w, h, zNear);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
     
