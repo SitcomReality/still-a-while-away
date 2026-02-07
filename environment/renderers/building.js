@@ -32,23 +32,18 @@ export function renderBuilding(ctx, w, h, f, road, fadeScale = 1.0) {
   
   if (nbl.scale <= 0) return;
 
-  // Render back face
-  ctx.fillStyle = adjustBrightness(f.color, -40);
-  drawQuad(ctx, [fbl, fbr, ftr, ftl]);
-  
-  // Render side faces
+  // Render the side face that is facing the road (the "inner" wall)
   ctx.fillStyle = adjustBrightness(f.color, -20);
-  const leftQuad = [nbl, fbl, ftl, ntl];
-  const rightQuad = [nbr, fbr, ftr, ntr];
-  
   if (sideSign < 0) {
-    // Left side visible
-    drawQuad(ctx, leftQuad);
-    renderWindowGrid(ctx, leftQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
+    // Building is on the left of the road, so its RIGHT side face is visible to the driver
+    const sideQuad = [nbr, fbr, ftr, ntr];
+    drawQuad(ctx, sideQuad);
+    renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
   } else {
-    // Right side visible
-    drawQuad(ctx, rightQuad);
-    renderWindowGrid(ctx, rightQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
+    // Building is on the right of the road, so its LEFT side face is visible to the driver
+    const sideQuad = [nbl, fbl, ftl, ntl];
+    drawQuad(ctx, sideQuad);
+    renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
   }
   
   // Render top if visible
