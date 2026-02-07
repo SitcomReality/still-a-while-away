@@ -32,6 +32,12 @@ export function renderBuilding(ctx, w, h, f, road, fadeScale = 1.0) {
   
   if (nbl.scale <= 0) return;
 
+  // Render top first so it sits behind walls (roof should be obscured by faces)
+  if (ntl.y < ftl.y) {
+    ctx.fillStyle = adjustBrightness(f.color, 10);
+    drawQuad(ctx, [ntl, ntr, ftr, ftl]);
+  }
+
   // Render the side face that is facing the road (the "inner" wall)
   ctx.fillStyle = adjustBrightness(f.color, -20);
   if (sideSign < 0) {
@@ -44,12 +50,6 @@ export function renderBuilding(ctx, w, h, f, road, fadeScale = 1.0) {
     const sideQuad = [nbl, fbl, ftl, ntl];
     drawQuad(ctx, sideQuad);
     renderWindowGrid(ctx, sideQuad, f.windowRows || 5, f.windowCols || 4, f.windowPattern);
-  }
-  
-  // Render top if visible
-  if (ntl.y < ftl.y) {
-    ctx.fillStyle = adjustBrightness(f.color, 10);
-    drawQuad(ctx, [ntl, ntr, ftr, ftl]);
   }
   
   // Render front face
