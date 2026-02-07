@@ -38,7 +38,17 @@ export class EnvironmentSystem {
       if ((feat.type && feat.type.startsWith && feat.type.startsWith('building_')) || feat.buildingType) {
         const halfRoad = CONST.ROAD_WIDTH / 2;
         const bHalfWidth = (feat.width || 0) / 2;
-        const minOffset = halfRoad + bHalfWidth + 1.0; // 1m safety margin
+        // Base safety margin to keep building edges off the road
+        let minOffset = halfRoad + bHalfWidth + 1.0; // 1m safety margin
+
+        // Extra buffer for skyscrapers and very wide buildings
+        const isSkyscraper = feat.buildingType === 'skyscraper' || (feat.type && feat.type.includes('skyscraper'));
+        if (isSkyscraper) {
+          minOffset += 10.0; // push skyscrapers significantly farther away
+        } else if ((feat.width || 0) > 30) {
+          minOffset += 6.0; // extra padding for very wide structures
+        }
+
         if (feat.offset === undefined || feat.offset < minOffset) {
           feat.offset = minOffset;
         }
