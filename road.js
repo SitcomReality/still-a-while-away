@@ -192,22 +192,22 @@ export class RoadSystem {
       // Glow first
       const glowW = 1.5;
       ctx.fillStyle = '#fffacd';
-      ctx.globalAlpha = 0.25 * Math.min(1, posNear.scale);
+      ctx.globalAlpha = 0.25 * Math.min(1, p1.scale);
       ctx.beginPath();
-      ctx.moveTo(x1 - glowW, posNear.y);
-      ctx.lineTo(x2 + glowW, posNear.y);
-      ctx.lineTo(x3 + glowW, posFar.y);
-      ctx.lineTo(x4 - glowW, posFar.y);
+      ctx.moveTo(x1 - glowW, p1.y);
+      ctx.lineTo(x2 + glowW, p2.y);
+      ctx.lineTo(x3 + glowW, p3.y);
+      ctx.lineTo(x4 - glowW, p4.y);
       ctx.fill();
 
       // Dash Core
       ctx.fillStyle = '#f5f5dc';
-      ctx.globalAlpha = 0.8 * Math.min(1, posNear.scale + 0.3);
+      ctx.globalAlpha = 0.8 * Math.min(1, p1.scale + 0.3);
       ctx.beginPath();
-      ctx.moveTo(x1, posNear.y);
-      ctx.lineTo(x2, posNear.y);
-      ctx.lineTo(x3, posFar.y);
-      ctx.lineTo(x4, posFar.y);
+      ctx.moveTo(x1, p1.y);
+      ctx.lineTo(x2, p2.y);
+      ctx.lineTo(x3, p3.y);
+      ctx.lineTo(x4, p4.y);
       ctx.fill();
     });
     
