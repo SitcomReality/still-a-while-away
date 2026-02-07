@@ -60,8 +60,8 @@ export class RoadSystem {
     const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
     const y = horizon + (screenH - horizon) * progress;
     
-    // Consistent center projection
-    const straightX = screenW * 0.5;
+    // Consistent center projection with camera offset
+    const straightX = screenW * 0.5 - (CONST.CAMERA_X_OFFSET * CONST.ENV_GLOBAL_SCALE * progress);
     let centerX = straightX;
     
     // Apply curve offset
@@ -97,8 +97,8 @@ export class RoadSystem {
       curveOffset = (targetCurve - currentCurve) * screenW * 2.5 * curveFade;
     }
     
-    // Add lateral offset in meters, scaled by perspective
-    const lateralX = lateral * CONST.ENV_GLOBAL_SCALE * progress;
+    // Add lateral offset in meters (relative to camera), scaled by perspective
+    const lateralX = (lateral - CONST.CAMERA_X_OFFSET) * CONST.ENV_GLOBAL_SCALE * progress;
     
     // Subtract height in meters, scaled by perspective
     const heightY = height * CONST.ENV_GLOBAL_SCALE * progress;
