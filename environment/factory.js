@@ -157,6 +157,5 @@ export function spawnFeature(distance, biome) {
 }
 
 export function shouldSpawnStreetlight(distance, biome) {
-  if (biome.streetlightSpacing <= 0) return false;
-  return Math.abs(distance % biome.streetlightSpacing) < 1;
+  return false; // Deprecated: handled by EnvironmentSystem specialized loop
 }

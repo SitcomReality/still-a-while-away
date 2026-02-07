@@ -10,26 +10,39 @@ export class EnvironmentSystem {
     this.road = road;
     this.features = [];
     this.nextFeatureDistance = 0;
+    this.nextStreetlightDistance = 0;
   }
   
   update(dt, biome) {
     const viewDistance = CONST.ENV_VIEW_DISTANCE;
-    
-    while (this.nextFeatureDistance < this.road.distance + viewDistance) {
-      // Regular streetlights
-      if (Factory.shouldSpawnStreetlight(this.nextFeatureDistance, biome)) {
-        const side = Math.floor(this.nextFeatureDistance / biome.streetlightSpacing) % 2 === 0 ? 'left' : 'right';
+
+    // Handle Streetlights on a fixed grid
+    if (biome.streetlightSpacing > 0) {
+      const spacing = biome.streetlightSpacing;
+      // If we've just entered a streetlight zone or fallen behind, catch up to current road distance
+      if (this.nextStreetlightDistance < this.road.distance) {
+        this.nextStreetlightDistance = Math.ceil(this.road.distance / spacing) * spacing;
+      }
+      
+      while (this.nextStreetlightDistance < this.road.distance + viewDistance) {
+        const side = (Math.round(this.nextStreetlightDistance / spacing) % 2 === 0) ? 'left' : 'right';
         this.features.push({
-          distance: this.nextFeatureDistance,
+          distance: this.nextStreetlightDistance,
           type: 'lightpole',
           side,
-          offset: 4.5, // 4.5m from center (just off the 8m wide road)
-          height: 8,
+          offset: 8.0, // 8m from center (road edge is 6m)
+          height: 9,
           hasLight: true,
           lightColor: '#fff8e1'
         });
+        this.nextStreetlightDistance += spacing;
       }
-      
+    } else {
+      // Keep pointer at edge of visibility so we don't spawn retroactively when moving into a city
+      this.nextStreetlightDistance = this.road.distance + viewDistance;
+    }
+    
+    while (this.nextFeatureDistance < this.road.distance + viewDistance) {
       // Regular features
       const feat = Factory.spawnFeature(this.nextFeatureDistance, biome);
 

@@ -2,29 +2,36 @@ import { renderGlow } from './utils.js';
 
 export function renderLightpole(ctx, x, y, scale, pole) {
   const height = pole.height * scale;
-  const width = Math.max(3, 1.5 * scale);
+  const width = 0.25 * scale; // Tighter, slimmer pole (25cm diameter)
   
-  if (height < 3) return;
+  if (height < 2) return;
   
-  // Solid color pole
-  ctx.fillStyle = '#3a3a3a';
-  ctx.fillRect(x - width/2, y - height, width, height);
+  // Main vertical pole
+  ctx.fillStyle = '#222222';
+  ctx.fillRect(x - width / 2, y - height, width, height);
   
-  // Light fixture
-  ctx.fillStyle = '#5a5a5a';
-  const fixW = width * 3;
-  const fixH = width * 1.5;
-  ctx.fillRect(x - fixW/2, y - height, fixW, fixH);
+  // Horizontal arm fixture
+  const armLen = 2.0 * scale; // 2 meter reach
+  const dir = pole.side === 'left' ? 1 : -1;
+  const armHeight = width * 0.7;
+  ctx.fillRect(x - width / 2, y - height, armLen * dir, armHeight);
   
   if (pole.hasLight) {
-    const lightY = y - height + (fixH / 2);
-    renderGlow(ctx, x, lightY, pole.lightColor, 40 * scale, 0.6);
+    const lightX = x + (armLen * dir) - (width * 0.5 * dir);
+    const lightY = y - height + (armHeight / 2);
     
-    // Bright core
+    // Ambient glow
+    renderGlow(ctx, lightX, lightY, pole.lightColor, 7 * scale, 0.5);
+    
+    // Small fixture housing
+    ctx.fillStyle = '#333';
+    ctx.fillRect(lightX - (width * dir), lightY - width, width * 2 * dir, width * 0.5);
+
+    // Bright core light source
     ctx.fillStyle = pole.lightColor;
-    ctx.globalAlpha = 0.95;
+    ctx.globalAlpha = 0.9;
     ctx.beginPath();
-    ctx.arc(x, lightY, Math.max(1, 3 * scale), 0, Math.PI * 2);
+    ctx.arc(lightX, lightY, width * 1.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
   }
