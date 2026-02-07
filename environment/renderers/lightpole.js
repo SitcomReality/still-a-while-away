@@ -17,7 +17,7 @@ export function renderLightpole(ctx, x, y, scale, pole) {
   ctx.fillRect(x - fixW/2, y - height, fixW, fixH);
   
   if (pole.hasLight) {
-    const lightY = y - height + 2;
+    const lightY = y - height + (fixH / 2);
     renderGlow(ctx, x, lightY, pole.lightColor, 40 * scale, 0.6);
     
     // Bright core

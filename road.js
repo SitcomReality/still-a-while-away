@@ -59,7 +59,9 @@ export class RoadSystem {
     const horizon = this.getHorizon(screenH);
     const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
     const y = horizon + (screenH - horizon) * progress;
-    const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
+    
+    // Consistent center projection
+    const straightX = screenW * 0.5;
     let centerX = straightX;
     
     // Apply curve offset
@@ -84,7 +86,7 @@ export class RoadSystem {
     const y = horizon + (screenH - horizon) * progress;
     
     // Base position on straightened road
-    const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
+    const straightX = screenW * 0.5;
     
     // Apply curve offset based on reference distance
     let curveOffset = 0;
@@ -95,10 +97,10 @@ export class RoadSystem {
       curveOffset = (targetCurve - currentCurve) * screenW * 2.5 * curveFade;
     }
     
-    // Add lateral offset (scales with distance for perspective)
-    const lateralX = lateral * screenW * progress;
+    // Add lateral offset in meters, scaled by perspective
+    const lateralX = lateral * CONST.ENV_GLOBAL_SCALE * progress;
     
-    // Subtract height (scales with distance)
+    // Subtract height in meters, scaled by perspective
     const heightY = height * CONST.ENV_GLOBAL_SCALE * progress;
     
     return {
@@ -122,14 +124,19 @@ export class RoadSystem {
         const dist = progress * viewDistance;
         const pos = this.getRoadPosAt(dist, w, h);
         
-        // Road width tapers into distance
-        const baseWidth = w * this.roadWidth;
-        const currentWidth = baseWidth * pos.scale + (w * CONST.ROAD_TOP_WIDTH) * (1 - pos.scale);
+        // Use projectPoint to find road edges for consistency with environment
+        const leftEdge = this.projectPoint(-CONST.ROAD_WIDTH / 2, 0, dist, w, h);
+        const rightEdge = this.projectPoint(CONST.ROAD_WIDTH / 2, 0, dist, w, h);
+        
+        // At horizon, enforce the minimum ROAD_TOP_WIDTH
+        const horizonWidth = w * CONST.ROAD_TOP_WIDTH;
+        const calculatedWidth = rightEdge.x - leftEdge.x;
+        const finalWidth = Math.max(calculatedWidth, horizonWidth * (1 - pos.scale));
         
         points.push({
             x: pos.x,
             y: pos.y,
-            w: currentWidth
+            w: finalWidth
         });
     }
 
@@ -160,28 +167,27 @@ export class RoadSystem {
   }
   
   renderMarkings(ctx, w, h) {
-    const { roadWidth } = this;
     const dashLength = CONST.MARKING_DASH_LENGTH;
+    const markingWidth = 0.15; // 15cm wide lines
     
     this.markings.forEach(m => {
       // Allow rendering slightly behind camera to ensure smooth exit
       if (m.distance > CONST.MARKING_RENDER_LIMIT || m.distance < -dashLength) return;
 
-      const posNear = this.getRoadPosAt(m.distance, w, h);
-      const posFar = this.getRoadPosAt(m.distance + dashLength, w, h);
+      const lateralOffset = m.offset || 0;
       
-      if (posNear.scale <= 0 || posFar.scale <= 0) return;
+      // Use projectPoint for all 4 corners of the dash
+      const p1 = this.projectPoint(lateralOffset - markingWidth/2, 0, m.distance, w, h);
+      const p2 = this.projectPoint(lateralOffset + markingWidth/2, 0, m.distance, w, h);
+      const p3 = this.projectPoint(lateralOffset + markingWidth/2, 0, m.distance + dashLength, w, h);
+      const p4 = this.projectPoint(lateralOffset - markingWidth/2, 0, m.distance + dashLength, w, h);
       
-      const wNear = Math.max(0.5, CONST.MARKING_WIDTH_SCALE * posNear.scale);
-      const wFar = Math.max(0.5, CONST.MARKING_WIDTH_SCALE * posFar.scale);
-      
-      const laneOffsetNear = (m.offset || 0) * (w * roadWidth * posNear.scale);
-      const laneOffsetFar = (m.offset || 0) * (w * roadWidth * posFar.scale);
+      if (p1.scale <= 0 || p3.scale <= 0) return;
 
-      const x1 = posNear.x + laneOffsetNear - wNear / 2;
-      const x2 = posNear.x + laneOffsetNear + wNear / 2;
-      const x3 = posFar.x + laneOffsetFar + wFar / 2;
-      const x4 = posFar.x + laneOffsetFar - wFar / 2;
+      const x1 = p1.x;
+      const x2 = p2.x;
+      const x3 = p3.x;
+      const x4 = p4.x;
 
       // Glow first
       const glowW = 1.5;

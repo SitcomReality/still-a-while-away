@@ -23,8 +23,8 @@ export class EnvironmentSystem {
           distance: this.nextFeatureDistance,
           type: 'lightpole',
           side,
-          offset: 1.2,
-          height: 25,
+          offset: 4.5, // 4.5m from center (just off the 8m wide road)
+          height: 8,
           hasLight: true,
           lightColor: '#fff8e1'
         });
@@ -42,26 +42,27 @@ export class EnvironmentSystem {
   
   renderFeature(ctx, f, w, h) {
     const relDist = f.distance - this.road.distance;
-    const pos = this.road.getRoadPosAt(relDist, w, h);
-    if (pos.scale <= 0) return;
-
+    
     // Apply fade-in scaling for objects at the far distance limit
     const fadeFactor = Math.min(1, Math.max(0, (CONST.ENV_VIEW_DISTANCE - relDist) / CONST.FADE_IN_DISTANCE));
 
-    const sideMultiplier = f.side === 'left' ? -1 : 1;
-    const x = pos.x + (w * f.offset * sideMultiplier * pos.scale);
-    const y = pos.y;
-    const scale = pos.scale;
-    const renderScale = scale * CONST.ENV_GLOBAL_SCALE * fadeFactor;
-
     if (f.type.startsWith('building_') || f.buildingType) {
       renderBuilding(ctx, w, h, f, this.road, fadeFactor);
-    } else if (f.type === 'tree') {
-      renderTree(ctx, x, y, renderScale, f);
-    } else if (f.type === 'lightpole') {
-      renderLightpole(ctx, x, y, renderScale, f);
-    } else if (f.type === 'bush') {
-      renderBush(ctx, x, y, renderScale, f);
+    } else {
+      const sideMultiplier = f.side === 'left' ? -1 : 1;
+      const lateral = f.offset * sideMultiplier;
+      const pos = this.road.projectPoint(lateral, 0, relDist, w, h);
+      if (pos.scale <= 0) return;
+
+      const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE * fadeFactor;
+
+      if (f.type === 'tree') {
+        renderTree(ctx, pos.x, pos.y, renderScale, f);
+      } else if (f.type === 'lightpole') {
+        renderLightpole(ctx, pos.x, pos.y, renderScale, f);
+      } else if (f.type === 'bush') {
+        renderBush(ctx, pos.x, pos.y, renderScale, f);
+      }
     }
   }
 

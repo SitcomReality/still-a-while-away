@@ -43,14 +43,14 @@ function generateWindowPattern(rows, cols) {
 export function getFeatureProps(type, biome) {
   if (type === 'tree') {
     return {
-      height: 15 + Math.random() * 25,
-      width: 8 + Math.random() * 8,
+      height: 4 + Math.random() * 8,
+      width: 3 + Math.random() * 4,
       color: biome.type === 'forest' ? '#0a2a0a' : biome.type === 'plains' ? '#2a4a2a' : '#2a4a2a',
       swayPhase: Math.random() * Math.PI * 2
     };
   } else if (type === 'lightpole') {
     return {
-      height: 25,
+      height: 8,
       hasLight: true,
       lightColor: '#fff8e1'
     };
@@ -71,12 +71,12 @@ function getBuildingProps(subtype) {
   const sidePattern = (r, c) => generateWindowPattern(r, c);
   
   if (subtype === 'skyscraper') {
-    const height = 120 + Math.random() * 80; // 2x larger
-    const depth = 30 + Math.random() * 40;
-    const width = 40 + Math.random() * 60;
-    const rows = Math.max(10, Math.floor(height / 8));
-    const sideCols = Math.max(3, Math.floor(depth / 5));
-    const frontCols = Math.max(3, Math.floor(width / 6));
+    const height = 40 + Math.random() * 60; 
+    const depth = 20 + Math.random() * 20;
+    const width = 20 + Math.random() * 30;
+    const rows = Math.max(10, Math.floor(height / 2));
+    const sideCols = Math.max(3, Math.floor(depth / 2));
+    const frontCols = Math.max(3, Math.floor(width / 2));
     return {
       buildingType: 'skyscraper',
       height, width, depth,
@@ -86,9 +86,9 @@ function getBuildingProps(subtype) {
       frontCols, frontPattern: sidePattern(rows, frontCols)
     };
   } else if (subtype === 'house') {
-    const height = 20 + Math.random() * 15;
-    const depth = 15 + Math.random() * 10;
-    const width = 20 + Math.random() * 15;
+    const height = 5 + Math.random() * 4;
+    const depth = 10 + Math.random() * 5;
+    const width = 12 + Math.random() * 5;
     return {
       buildingType: 'house',
       height, width, depth,
@@ -100,9 +100,9 @@ function getBuildingProps(subtype) {
       frontPattern: sidePattern(2, 3)
     };
   } else if (subtype === 'warehouse') {
-    const height = 30 + Math.random() * 20;
-    const depth = 40 + Math.random() * 30;
-    const width = 35 + Math.random() * 25;
+    const height = 8 + Math.random() * 6;
+    const depth = 15 + Math.random() * 10;
+    const width = 15 + Math.random() * 10;
     return {
       buildingType: 'warehouse',
       height, width, depth,
@@ -114,9 +114,9 @@ function getBuildingProps(subtype) {
       frontPattern: sidePattern(3, 4)
     };
   } else if (subtype === 'farm') {
-    const height = 15 + Math.random() * 10;
-    const depth = 20 + Math.random() * 15;
-    const width = 25 + Math.random() * 20;
+    const height = 6 + Math.random() * 4;
+    const depth = 10 + Math.random() * 5;
+    const width = 12 + Math.random() * 6;
     return {
       buildingType: 'farm',
       height, width, depth,
@@ -137,18 +137,20 @@ export function spawnFeature(distance, biome) {
   const type = types[Math.floor(Math.random() * types.length)];
   const props = getFeatureProps(type, biome);
 
-  let baseOffset = 1.3;
+  // Offset in meters from center
+  let baseOffset = 7.0; 
   if (type.startsWith('building_')) {
     const subtype = type.split('_')[1];
-    baseOffset = subtype === 'farm' ? 3.0 : subtype === 'skyscraper' ? 2.0 : 1.8;
+    baseOffset = subtype === 'farm' ? 25.0 : subtype === 'skyscraper' ? 18.0 : 12.0;
   }
-  if (type === 'tree') baseOffset = 1.4;
+  if (type === 'tree') baseOffset = 6.0;
+  if (type === 'bush') baseOffset = 5.5;
 
   return {
     distance,
     type,
     side: Math.random() > 0.5 ? 'left' : 'right',
-    offset: baseOffset + Math.random() * (type.includes('farm') ? 2.0 : 1.0),
+    offset: baseOffset + Math.random() * (type.includes('farm') ? 10.0 : 5.0),
     ...props
   };
 }

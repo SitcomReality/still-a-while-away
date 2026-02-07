@@ -71,35 +71,22 @@ export class TrafficSystem {
   }
 
   renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0) {
-    const pos = this.road.getRoadPosAt(v.distance, w, h);
-    if (pos.scale <= 0) return;
-    
-    const size = CONST.TRAFFIC_SIZE_SCALE * pos.scale * fadeScale;
-    const width = size * 1.4;
-    const height = size * 0.7 * v.height;
-    const currentRoadWidth = w * this.road.roadWidth * pos.scale;
-    const laneOffset = v.lane === 'right' ? (currentRoadWidth * 0.25) : (-currentRoadWidth * 0.25);
-    const baseCenterX = pos.x + laneOffset;
-    
-    const futureCurve = this.road.getCurveAt(v.distance + 20);
-    const currentCurve = this.road.getCurveAt(v.distance);
-    const curveDelta = futureCurve - currentCurve;
-    
-    const shrink = Math.max(0.3, 1 - Math.abs(curveDelta) * 4.0);
-    const frontOffset = curveDelta * w * 0.25 * pos.scale;
-    const frontCenterX = baseCenterX + frontOffset;
-    const frontWidth = width * shrink;
-    
-    const q = [
-      { x: baseCenterX - width / 2, y: pos.y, scale: pos.scale },
-      { x: baseCenterX + width / 2, y: pos.y, scale: pos.scale },
-      { x: frontCenterX + frontWidth / 2, y: pos.y - height, scale: pos.scale },
-      { x: frontCenterX - frontWidth / 2, y: pos.y - height, scale: pos.scale }
-    ];
+    const roadW = CONST.ROAD_WIDTH;
+    const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
+    const carWidth = 1.8 * fadeScale; 
+    const carHeight = 1.4 * v.height * fadeScale;
 
-    const dimFactor = Math.abs(curveDelta) > 0.05 ? 0.3 : 1.0;
-    this.renderVehicleSilhouette(ctx, q, v);
-    this.renderLights(ctx, q, v, dimFactor);
+    const nbl = this.road.projectPoint(laneOffset - carWidth/2, 0, v.distance, w, h);
+    const nbr = this.road.projectPoint(laneOffset + carWidth/2, 0, v.distance, w, h);
+    const ntl = this.road.projectPoint(laneOffset - carWidth/2, carHeight, v.distance, w, h);
+    const ntr = this.road.projectPoint(laneOffset + carWidth/2, carHeight, v.distance, w, h);
+    
+    if (nbl.scale <= 0) return;
+
+    const quad = [nbl, nbr, ntr, ntl];
+    const dimFactor = 1.0;
+    this.renderVehicleSilhouette(ctx, quad, v);
+    this.renderLights(ctx, quad, v, dimFactor);
   }
 
   renderVehicle3D(ctx, w, h, v, fadeScale = 1.0) {
@@ -107,10 +94,10 @@ export class TrafficSystem {
     const zFar = v.distance + v.depth;
     const curveRef = v.distance;
     
-    const roadW = this.road.roadWidth;
+    const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
-    const carWidth = 0.5 * fadeScale; 
-    const carHeight = v.height * fadeScale;
+    const carWidth = 1.8 * fadeScale; 
+    const carHeight = 1.4 * v.height * fadeScale;
 
     const lOff = laneOffset - carWidth/2;
     const rOff = laneOffset + carWidth/2;
@@ -118,13 +105,13 @@ export class TrafficSystem {
     // Project all 8 corners with consistent curve reference
     const nbl = this.road.projectPoint(lOff, 0, zNear, w, h, curveRef);
     const nbr = this.road.projectPoint(rOff, 0, zNear, w, h, curveRef);
-    const ntl = this.road.projectPoint(lOff, carHeight * CONST.TRAFFIC_SIZE_SCALE * 0.7, zNear, w, h, curveRef);
-    const ntr = this.road.projectPoint(rOff, carHeight * CONST.TRAFFIC_SIZE_SCALE * 0.7, zNear, w, h, curveRef);
+    const ntl = this.road.projectPoint(lOff, carHeight, zNear, w, h, curveRef);
+    const ntr = this.road.projectPoint(rOff, carHeight, zNear, w, h, curveRef);
     
     const fbl = this.road.projectPoint(lOff, 0, zFar, w, h, curveRef);
     const fbr = this.road.projectPoint(rOff, 0, zFar, w, h, curveRef);
-    const ftl = this.road.projectPoint(lOff, carHeight * CONST.TRAFFIC_SIZE_SCALE * 0.7, zFar, w, h, curveRef);
-    const ftr = this.road.projectPoint(rOff, carHeight * CONST.TRAFFIC_SIZE_SCALE * 0.7, zFar, w, h, curveRef);
+    const ftl = this.road.projectPoint(lOff, carHeight, zFar, w, h, curveRef);
+    const ftr = this.road.projectPoint(rOff, carHeight, zFar, w, h, curveRef);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
     
