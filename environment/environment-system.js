@@ -95,7 +95,10 @@ export class EnvironmentSystem {
       if (f.type === 'tree') {
         renderTree(ctx, pos.x, pos.y, renderScale, f);
       } else if (f.type === 'lightpole') {
-        renderLightpole(ctx, pos.x, pos.y, renderScale, f);
+        // Calculate exit fade for lights as they pass the camera
+        // Start fading at 8m, fully out by -5m (to avoid perspective singularity at -8m)
+        const exitFade = Math.max(0, Math.min(1, (relDist - (-5)) / (8 - (-5))));
+        renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade);
       } else if (f.type === 'bush') {
         renderBush(ctx, pos.x, pos.y, renderScale, f);
       }
