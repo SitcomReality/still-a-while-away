@@ -54,43 +54,57 @@ export class RoadSystem {
 
   /**
    * Projects a world distance into screen coordinates.
-   * @param {number} distance - Distance from camera in meters.
-   * @param {number} screenW - Canvas width.
-   * @param {number} screenH - Canvas height.
-   * @param {number} [curveRefDistance] - Optional anchor distance to use for curvature calculation (prevents rigid objects from shearing).
    */
-  getRoadPosAt(distance, screenW, screenH, curveRefDistance = distance) {
+  getRoadPosAt(distance, screenW, screenH) {
     const horizon = this.getHorizon(screenH);
-    
-    // Perspective-correct projection: y is proportional to 1/z
     const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
     const y = horizon + (screenH - horizon) * progress;
-    
-    // VANISHING POINT AND BOTTOM ANCHOR (Camera offset)
     const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
     let centerX = straightX;
     
-    // Use the reference distance to determine the "world" curvature this object is following.
-    // This is vital for rigid objects spanning multiple distances (like buildings).
-    const refProgress = CONST.PERSPECTIVE_K / (curveRefDistance + CONST.PERSPECTIVE_K);
-
-    // HORIZONTAL CURVATURE
-    if (refProgress < 0.5) {
-      // The fade factor determines how much the curve 'unfolds' as it approaches the straight foreground.
-      // For rigidity, we use the specific point's progress for fading, but the reference's target curve.
+    // Apply curve offset
+    if (progress < 0.5) {
       const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
       const currentCurve = this.getCurveAt(0);
-      const targetCurve = this.getCurveAt(curveRefDistance);
-      
+      const targetCurve = this.getCurveAt(distance);
       const curveOffset = (targetCurve - currentCurve) * screenW * 2.5;
       centerX += curveOffset * curveFade;
     }
     
+    return { x: centerX, y, scale: progress, horizon };
+  }
+
+  /**
+   * Projects a 3D world point (lateral, height, distance) to screen coordinates.
+   * Uses a reference distance for curve to maintain object rigidity.
+   */
+  projectPoint(lateral, height, distance, screenW, screenH, curveRef = distance) {
+    const horizon = this.getHorizon(screenH);
+    const progress = CONST.PERSPECTIVE_K / (distance + CONST.PERSPECTIVE_K);
+    const y = horizon + (screenH - horizon) * progress;
+    
+    // Base position on straightened road
+    const straightX = screenW * 0.5 + (screenW * 0.48) * progress;
+    
+    // Apply curve offset based on reference distance
+    let curveOffset = 0;
+    if (progress < 0.5) {
+      const curveFade = Math.pow(1 - (progress / 0.5), 1.5);
+      const currentCurve = this.getCurveAt(0);
+      const targetCurve = this.getCurveAt(curveRef);
+      curveOffset = (targetCurve - currentCurve) * screenW * 2.5 * curveFade;
+    }
+    
+    // Add lateral offset (scales with distance for perspective)
+    const lateralX = lateral * screenW * progress;
+    
+    // Subtract height (scales with distance)
+    const heightY = height * CONST.ENV_GLOBAL_SCALE * progress;
+    
     return {
-      x: centerX,
-      y: y,
-      scale: progress,
-      horizon
+      x: straightX + curveOffset + lateralX,
+      y: y - heightY,
+      scale: progress
     };
   }
 
