@@ -5,6 +5,7 @@ export class CanvasManager {
       env: document.getElementById('environment-layer'),
       road: document.getElementById('road-layer'),
       traffic: document.getElementById('traffic-layer'),
+      fog: document.getElementById('fog-layer'),
       weather: document.getElementById('weather-layer'),
       windshield: document.getElementById('windshield-layer'),
       ui: document.getElementById('ui-layer')

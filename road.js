@@ -110,7 +110,7 @@ export class RoadSystem {
     };
   }
 
-  render(ctx, w, h) {
+  render(ctx, w, h, fogIntensity = 0) {
     const { roadWidth } = this;
     const segments = CONST.ROAD_SEGMENTS;
     const viewDistance = CONST.VIEW_DISTANCE;
@@ -142,8 +142,17 @@ export class RoadSystem {
 
     // Draw Road Surface
     const roadGradient = ctx.createLinearGradient(0, horizon, 0, h);
-    roadGradient.addColorStop(0, '#1a1a1a');
-    roadGradient.addColorStop(0.5, '#242424');
+    
+    // Apply fog to the road at the horizon
+    const fogColor = CONST.FOG_COLOR;
+    const fogMix = Math.min(1, fogIntensity * 2);
+    
+    // Calculate color at horizon (fully fogged if high intensity)
+    const horizonColor = fogMix > 0.5 ? fogColor : '#1a1a1a';
+    
+    roadGradient.addColorStop(0, horizonColor);
+    roadGradient.addColorStop(0.2, fogMix > 0.2 ? fogColor : '#1e1e1e');
+    roadGradient.addColorStop(0.6, '#242424');
     roadGradient.addColorStop(1, '#2a2a2a');
     
     ctx.fillStyle = roadGradient;

@@ -101,30 +101,44 @@ export class WeatherSystem {
   }
   
   renderFog(ctx, w, h) {
-    // Distance-based atmospheric fog
-    const gradient = ctx.createLinearGradient(0, h * 0.3, 0, h);
-    const color = `200, 210, 225`;
-    gradient.addColorStop(0, `rgba(${color}, 0)`);
-    gradient.addColorStop(0.3, `rgba(${color}, ${0.2 * this.fog})`);
-    gradient.addColorStop(1, `rgba(${color}, ${0.7 * this.fog})`);
+    // The main depth-based fog is handled per-object in renderer.js
+    // This method renders a global screen-space haze to unify the atmosphere
+    if (this.fog <= 0.01) return;
+
+    const fogAlpha = Math.min(0.8, this.fog * 0.5);
+    const grad = ctx.createLinearGradient(0, h * 0.2, 0, h);
+    grad.addColorStop(0, 'rgba(148, 163, 184, 0)');
+    grad.addColorStop(0.5, `rgba(148, 163, 184, ${fogAlpha * 0.5})`);
+    grad.addColorStop(1, `rgba(148, 163, 184, ${fogAlpha})`);
     
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Subtle drifting fog patches
-    if (this.fog > 0.3) {
+    // Subtle drifting fog patches for texture
+    if (this.fog > 0.4) {
       ctx.save();
-      ctx.globalAlpha = this.fog * 0.2;
-      for (let i = 0; i < 5; i++) {
-        const x = ((Date.now() * 0.02 + i * 1000) % w);
-        const y = h * 0.5 + Math.sin(Date.now() * 0.001 + i) * 20;
-        const grad = ctx.createRadialGradient(x, y, 0, x, y, 200);
-        grad.addColorStop(0, `rgba(${color}, 0.5)`);
-        grad.addColorStop(1, `rgba(${color}, 0)`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(x - 200, y - 200, 400, 400);
+      const time = Date.now() * 0.001;
+      for (let i = 0; i < 3; i++) {
+        const x = ((time * 30 + i * w * 0.4) % (w + 400)) - 200;
+        const y = h * 0.6 + Math.sin(time * 0.5 + i) * 50;
+        const size = 300 + Math.sin(time * 0.2 + i) * 100;
+        const radial = ctx.createRadialGradient(x, y, 0, x, y, size);
+        radial.addColorStop(0, `rgba(148, 163, 184, ${this.fog * 0.2})`);
+        radial.addColorStop(1, 'rgba(148, 163, 184, 0)');
+        ctx.fillStyle = radial;
+        ctx.fillRect(x - size, y - size, size * 2, size * 2);
       }
       ctx.restore();
     }
+  }
+
+  getFogAlpha(distance) {
+    if (this.fog <= 0.01) return 0;
+    // range is ~800m when intensity is 0.5. 
+    // Higher intensity pulls the fog wall closer.
+    const fogWall = CONST.FOG_MAX_DISTANCE * (1.0 - (this.fog - 0.5));
+    const alpha = Math.min(1, distance / Math.max(1, fogWall));
+    // Use an exponential-ish ramp for more natural depth feel
+    return 1 - Math.pow(1 - alpha, 2);
   }
 }

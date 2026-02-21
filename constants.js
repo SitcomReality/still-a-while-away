@@ -38,6 +38,10 @@ export const FADE_IN_DISTANCE = 200;   // Distance over which objects "grow" in
 export const TRAFFIC_RENDER_LIMIT = 800;
 export const TRAFFIC_REMOVAL_THRESHOLD = -10;
 
+// Weather and Fog
+export const FOG_COLOR = '#94a3b8'; // Atmospheric blue-gray
+export const FOG_MAX_DISTANCE = 800; // Distance at which 50% fog intensity is fully opaque
+
 // Heading and UI
 export const HEADING_SENSITIVITY = 2;
 export const COMPASS_WIDTH = 300;

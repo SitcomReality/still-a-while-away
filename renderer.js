@@ -30,7 +30,7 @@ export class Renderer {
     
     // 2. Road layer
     ctxs.road.clearRect(0, 0, w, h);
-    state.road.render(ctxs.road, w, h);
+    state.road.render(ctxs.road, w, h, state.weather.fog);
 
     // 3. Depth-sorted world objects (Environment + Traffic)
     ctxs.env.clearRect(0, 0, w, h);
@@ -65,16 +65,22 @@ export class Renderer {
     renderables.sort((a, b) => b.z - a.z);
     
     renderables.forEach(item => {
+      const fogAlpha = state.weather.getFogAlpha(item.z);
+      ctxs.traffic.globalAlpha = 1 - fogAlpha;
+      
       if (item.type === 'env') {
         state.environment.renderFeature(ctxs.traffic, item.data, w, h);
       } else {
         state.traffic.renderVehicle(ctxs.traffic, item.data, w, h);
       }
     });
+    ctxs.traffic.globalAlpha = 1;
     
-    // 4. Weather layer
+    // 4. Weather & Fog layer
     ctxs.weather.clearRect(0, 0, w, h);
+    ctxs.fog.clearRect(0, 0, w, h);
     state.weather.render(ctxs.weather, w, h);
+    state.weather.renderFog(ctxs.fog, w, h);
     
     // 5. Windshield layer
     ctxs.windshield.clearRect(0, 0, w, h);

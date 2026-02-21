@@ -41,6 +41,11 @@
       z-index: 100;
     }
 
+    #fog-layer {
+      pointer-events: none;
+      z-index: 95; /* Just behind cabin, in front of everything else */
+    }
+
     #ui-layer {
       pointer-events: none;
       z-index: 110;
@@ -129,6 +134,7 @@
     <canvas id="road-layer"></canvas>
     <canvas id="environment-layer"></canvas>
     <canvas id="traffic-layer"></canvas>
+    <canvas id="fog-layer"></canvas>
     <canvas id="weather-layer"></canvas>
     <canvas id="windshield-layer"></canvas>
     <canvas id="ui-layer"></canvas>

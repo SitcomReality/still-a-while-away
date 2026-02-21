@@ -28,6 +28,17 @@ export class SkyRenderer {
     
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, horizonY);
+
+    // Fog overlay at horizon
+    const fogIntensity = biome.weather.fog;
+    if (fogIntensity > 0.05) {
+      const fogAlpha = Math.min(1, fogIntensity * 2); // 0.5 becomes 1.0 (opaque)
+      const fogGrad = ctx.createLinearGradient(0, horizonY - 100, 0, horizonY);
+      fogGrad.addColorStop(0, 'rgba(148, 163, 184, 0)');
+      fogGrad.addColorStop(1, `rgba(148, 163, 184, ${fogAlpha})`);
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(0, horizonY - 100, w, 100);
+    }
     
     // Stars
     if (biome.stars > 0.01) {
