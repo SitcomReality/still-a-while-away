@@ -108,7 +108,7 @@ export class TrafficSystem {
     const quad = [nbl, nbr, ntr, ntl];
     const dimFactor = 1.0;
     this.renderVehicleSilhouette(ctx, quad, v);
-    this.renderLights(ctx, quad, v, dimFactor);
+    this.renderLights(ctx, quad, v, dimFactor, fadeScale);
   }
 
   renderVehicle3D(ctx, w, h, v, fadeScale = 1.0) {
@@ -155,25 +155,26 @@ export class TrafficSystem {
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
     const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
-    this.renderLights(ctx, nearQuad, v, dimFactor);
+    this.renderLights(ctx, nearQuad, v, dimFactor, fadeScale);
   }
 
-  renderLights(ctx, quad, vehicle, dimFactor) {
+  renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0) {
     const { lane, headlightColor, headlightIntensity } = vehicle;
     const isSameDirection = lane === 'left';
     const lightColor = isSameDirection ? '#ff0000' : headlightColor;
-    const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0);
+    // Modulate brightness by fadeScale as they appear
+    const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0) * fadeScale;
     const scale = quad[0].scale;
 
     const lightL = bilinearMap(quad, 0.2, 0.75);
     const lightR = bilinearMap(quad, 0.8, 0.75);
     
     if (!isSameDirection) {
-      const glowSize = 1000 * scale * brightness;
+      const glowSize = 1000 * scale * brightness * fadeScale;
       renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, 0.4 * brightness);
       renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, 0.4 * brightness);
     } else {
-      const glowSize = 100 * scale * brightness;
+      const glowSize = 100 * scale * brightness * fadeScale;
       ctx.globalAlpha = 0.3 * brightness;
       ctx.fillStyle = lightColor;
       ctx.beginPath(); ctx.arc(lightL.x, lightL.y, glowSize, 0, Math.PI * 2); ctx.fill();
@@ -181,7 +182,7 @@ export class TrafficSystem {
       ctx.globalAlpha = 1;
     }
     
-    const coreSize = Math.max(2, (isSameDirection ? 6 : 8) * scale);
+    const coreSize = Math.max(1, (isSameDirection ? 6 : 8) * scale * fadeScale);
     ctx.fillStyle = lightColor;
     ctx.globalAlpha = brightness * 0.95;
     ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
