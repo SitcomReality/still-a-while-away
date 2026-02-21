@@ -10,7 +10,9 @@ export class DevMenu {
       panel: document.getElementById('dev-panel'),
       time: document.getElementById('dev-time'),
       speed: document.getElementById('dev-speed'),
-      weather: document.getElementById('dev-weather'),
+      rain: document.getElementById('dev-rain'),
+      fog: document.getElementById('dev-fog'),
+      clouds: document.getElementById('dev-clouds'),
       location: document.getElementById('dev-location'),
       traffic: document.getElementById('dev-traffic'),
       debugView: document.getElementById('dev-debug-view'),
@@ -36,16 +38,23 @@ export class DevMenu {
       this.game.road.speed = parseFloat(e.target.value);
     });
 
-    this.elements.weather.addEventListener('change', (e) => {
-      const type = e.target.value;
-      const bWeather = this.game.biomes.weather;
-      if (type === 'clear') {
-        bWeather.targetRain = 0; bWeather.targetFog = 0; bWeather.targetClouds = 0;
-      } else if (type === 'rain') {
-        bWeather.targetRain = 0.8; bWeather.targetFog = 0.2; bWeather.targetClouds = 0.9;
-      } else if (type === 'fog') {
-        bWeather.targetRain = 0; bWeather.targetFog = 0.8; bWeather.targetClouds = 0.4;
-      }
+    const stopCycle = () => {
+      this.game.biomes.weather.changeTimer = 999999;
+    };
+
+    this.elements.rain.addEventListener('input', (e) => {
+      this.game.biomes.weather.targetRain = parseFloat(e.target.value);
+      stopCycle();
+    });
+
+    this.elements.fog.addEventListener('input', (e) => {
+      this.game.biomes.weather.targetFog = parseFloat(e.target.value);
+      stopCycle();
+    });
+
+    this.elements.clouds.addEventListener('input', (e) => {
+      this.game.biomes.weather.targetClouds = parseFloat(e.target.value);
+      stopCycle();
     });
 
     this.elements.location.addEventListener('change', (e) => {
@@ -65,7 +74,9 @@ export class DevMenu {
     // Sync initial state
     this.elements.time.value = this.game.biomes.timeValue;
     this.elements.speed.value = this.game.road.speed;
-    this.elements.weather.value = this.game.weather.type;
+    this.elements.rain.value = this.game.biomes.weather.targetRain;
+    this.elements.fog.value = this.game.biomes.weather.targetFog;
+    this.elements.clouds.value = this.game.biomes.weather.targetClouds;
     this.elements.location.value = this.game.biomes.biomeTypes[this.game.biomes.currentBiomeIndex].id;
   }
 
@@ -84,6 +95,12 @@ export class DevMenu {
     // Periodically sync UI inputs with simulation (if simulation changes them)
     if (Math.random() < 0.05) {
       this.elements.time.value = this.game.biomes.timeValue;
+      // Only sync weather if the user isn't manual overriding (timer isn't huge)
+      if (this.game.biomes.weather.changeTimer < 10000) {
+        this.elements.rain.value = this.game.biomes.weather.targetRain;
+        this.elements.fog.value = this.game.biomes.weather.targetFog;
+        this.elements.clouds.value = this.game.biomes.weather.targetClouds;
+      }
     }
   }
 }
