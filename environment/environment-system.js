@@ -96,11 +96,14 @@ export class EnvironmentSystem {
       const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE;
       const risingOffset = (1 - visibility) * pixelHeight;
       
-      // Shift context down and clip at the base (horizon-aligned ground plane at this distance)
-      ctx.translate(0, risingOffset);
+      // Clip at the base (horizon-aligned ground plane at this distance)
+      // The clip must be applied BEFORE the translation to remain fixed at the horizon line
       ctx.beginPath();
       ctx.rect(0, 0, w, pos.y); 
       ctx.clip();
+
+      // Shift context down so object appears to rise from behind the mask
+      ctx.translate(0, risingOffset);
     }
 
     const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE;

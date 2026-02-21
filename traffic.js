@@ -71,13 +71,15 @@ export class TrafficSystem {
       const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
       
       const objHeight = 1.4 * v.height;
-      const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE;
+      const pixelHeight = objHeight * v.height * pos.scale * CONST.ENV_GLOBAL_SCALE;
       const risingOffset = (1 - visibility) * pixelHeight;
 
-      ctx.translate(0, risingOffset);
+      // Clip before translating so the mask stays fixed relative to the road ground
       ctx.beginPath();
       ctx.rect(0, 0, w, pos.y);
       ctx.clip();
+
+      ctx.translate(0, risingOffset);
     }
 
     if (v.distance < 250) {
