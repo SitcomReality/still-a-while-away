@@ -38,7 +38,8 @@ export class TrafficSystem {
     const type = types[Math.floor(Math.random() * types.length)];
     
     const vehicle = {
-      distance: 250 + Math.random() * 150,
+      // Spawn vehicles at the edge of the render distance to allow for smooth fade-in
+      distance: CONST.TRAFFIC_RENDER_LIMIT - 10,
       speed: 20 + Math.random() * 20,
       type,
       // Oncoming traffic in right lane, occasional traffic in our lane
@@ -62,7 +63,8 @@ export class TrafficSystem {
 
   renderVehicle(ctx, v, w, h) {
     const visibility = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
-    const scaleFactor = 0.1 + (visibility * 0.9);
+    // For vehicles, we allow the scale to go all the way to 0 at the horizon for a "tiny point" effect
+    const scaleFactor = visibility;
     
     ctx.save();
     
@@ -162,17 +164,23 @@ export class TrafficSystem {
     const { lane, headlightColor, headlightIntensity } = vehicle;
     const isSameDirection = lane === 'left';
     const lightColor = isSameDirection ? '#ff0000' : headlightColor;
-    // Modulate brightness by fadeScale as they appear
-    const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0) * fadeScale;
+    
+    // Use a cubic ramp for brightness to make the appearance even more gradual
+    const arrivalRamp = Math.pow(fadeScale, 3);
+    const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0) * arrivalRamp;
     const scale = quad[0].scale;
 
     const lightL = bilinearMap(quad, 0.2, 0.75);
     const lightR = bilinearMap(quad, 0.8, 0.75);
     
     if (!isSameDirection) {
-      const glowSize = 1000 * scale * brightness * fadeScale;
-      renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, 0.4 * brightness);
-      renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, 0.4 * brightness);
+      // Glow size scales aggressively with the arrival ramp to prevent sudden popping
+      const glowSize = 1200 * scale * arrivalRamp;
+      // Also scale the glow strength
+      const glowStrength = 0.5 * arrivalRamp;
+      
+      renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, glowStrength);
+      renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, glowStrength);
     } else {
       const glowSize = 100 * scale * brightness * fadeScale;
       ctx.globalAlpha = 0.3 * brightness;
