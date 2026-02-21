@@ -26,6 +26,16 @@ export class BiomeManager {
       { time: 1.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 1.0 }
     ];
 
+    this.weather = {
+      rain: 0,
+      fog: 0,
+      clouds: 0,
+      targetRain: 0,
+      targetFog: 0,
+      targetClouds: 0,
+      changeTimer: 0
+    };
+
     this.current = this.getInterpolatedState();
   }
   
@@ -33,13 +43,41 @@ export class BiomeManager {
     // Update time
     this.timeValue = (this.timeValue + this.timeScale * dt) % 1.0;
     
-    // Biome transitions (can move forward or backward along spectrum)
+    // Biome transitions
     this.nextBiomeChange -= dt;
     if (this.nextBiomeChange <= 0) {
       const change = Math.random() > 0.5 ? 1 : -1;
       this.currentBiomeIndex = Math.max(0, Math.min(this.biomeTypes.length - 1, this.currentBiomeIndex + change));
       this.nextBiomeChange = 60 + Math.random() * 60;
     }
+
+    // Weather cycles
+    this.weather.changeTimer -= dt;
+    if (this.weather.changeTimer <= 0) {
+      const biome = this.biomeTypes[this.currentBiomeIndex];
+      // Chance of weather depends on biome
+      const roll = Math.random();
+      if (roll < 0.6) { // 60% Clear
+        this.weather.targetRain = 0;
+        this.weather.targetFog = 0;
+        this.weather.targetClouds = 0;
+      } else if (roll < 0.8) { // 20% Foggy
+        this.weather.targetRain = 0;
+        this.weather.targetFog = Math.random();
+        this.weather.targetClouds = 0.3 + Math.random() * 0.4;
+      } else { // 20% Rainy
+        this.weather.targetRain = Math.random();
+        this.weather.targetFog = 0.1 + Math.random() * 0.2;
+        this.weather.targetClouds = 0.6 + Math.random() * 0.4;
+      }
+      this.weather.changeTimer = 30 + Math.random() * 60;
+    }
+
+    // Smooth weather transitions
+    const wSpeed = 0.1;
+    this.weather.rain += (this.weather.targetRain - this.weather.rain) * dt * wSpeed;
+    this.weather.fog += (this.weather.targetFog - this.weather.fog) * dt * wSpeed;
+    this.weather.clouds += (this.weather.targetClouds - this.weather.clouds) * dt * wSpeed;
 
     // Refresh state
     this.current = this.getInterpolatedState();
@@ -58,15 +96,24 @@ export class BiomeManager {
     const biome = this.biomeTypes[this.currentBiomeIndex];
     const trafficByType = { city: 1.5, suburbs: 0.8, plains: 0.3, forest: 0.2 };
     
+    // Apply weather to ambient and stars
+    const weatherFactor = 1.0 - (this.weather.clouds * 0.7);
+    const starFactor = 1.0 - Math.max(this.weather.clouds, this.weather.fog);
+
     return {
       type: biome.id,
       timeValue: this.timeValue,
       name: t < 0.5 ? s1.name : s2.name,
       skyColors,
       groundColor: lerpColor(s1.ground, s2.ground, t),
-      ambient: lerp(s1.ambient, s2.ambient, t),
-      stars: lerp(s1.stars, s2.stars, t),
-      weather: 'clear',
+      ambient: lerp(s1.ambient, s2.ambient, t) * weatherFactor,
+      stars: lerp(s1.stars, s2.stars, t) * starFactor,
+      weather: {
+        rain: this.weather.rain,
+        fog: this.weather.fog,
+        clouds: this.weather.clouds,
+        type: this.weather.rain > 0.2 ? 'rain' : (this.weather.fog > 0.2 ? 'fog' : 'clear')
+      },
       trafficDensity: trafficByType[biome.id] || 0.5,
       treeDensity: biome.treeDensity,
       buildingDensity: biome.buildingDensity,

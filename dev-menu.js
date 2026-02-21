@@ -37,7 +37,15 @@ export class DevMenu {
     });
 
     this.elements.weather.addEventListener('change', (e) => {
-      this.game.weather.transitionTo(e.target.value);
+      const type = e.target.value;
+      const bWeather = this.game.biomes.weather;
+      if (type === 'clear') {
+        bWeather.targetRain = 0; bWeather.targetFog = 0; bWeather.targetClouds = 0;
+      } else if (type === 'rain') {
+        bWeather.targetRain = 0.8; bWeather.targetFog = 0.2; bWeather.targetClouds = 0.9;
+      } else if (type === 'fog') {
+        bWeather.targetRain = 0; bWeather.targetFog = 0.8; bWeather.targetClouds = 0.4;
+      }
     });
 
     this.elements.location.addEventListener('change', (e) => {

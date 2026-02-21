@@ -1,24 +1,26 @@
 export class WeatherSystem {
   constructor() {
-    this.type = 'clear';
-    this.intensity = 0;
-    this.targetIntensity = 0;
+    this.rain = 0;
+    this.fog = 0;
+    this.clouds = 0;
     this.particles = [];
+    this.fogParticles = []; // For "spectrum" variation
   }
   
   update(dt, biome) {
-    // Set weather based on biome
-    if (this.type !== biome.weather) {
-      this.transitionTo(biome.weather);
-    }
+    const { weather } = biome;
     
-    // Smooth transition
-    this.intensity += (this.targetIntensity - this.intensity) * dt * 2;
+    // Direct sync with biome smoothed weather
+    this.rain = weather.rain;
+    this.fog = weather.fog;
+    this.clouds = weather.clouds;
     
     // Update particles
-    if (this.type === 'rain') {
+    if (this.rain > 0.05) {
       this.updateRain(dt);
-    } else if (this.type === 'fog') {
+    }
+    
+    if (this.fog > 0.05) {
       this.updateFog(dt);
     }
   }
@@ -29,15 +31,15 @@ export class WeatherSystem {
   }
   
   updateRain(dt) {
-    const targetCount = Math.floor(this.intensity * 150);
+    const targetCount = Math.floor(this.rain * 200);
     
     // Add particles
     while (this.particles.length < targetCount) {
       this.particles.push({
         x: Math.random(),
         y: Math.random(),
-        speed: 0.6 + Math.random() * 0.4,
-        length: 10 + Math.random() * 10
+        speed: 0.8 + Math.random() * 0.5,
+        length: 15 + Math.random() * 15
       });
     }
     
@@ -61,18 +63,17 @@ export class WeatherSystem {
   }
   
   render(ctx, w, h) {
-    if (this.intensity < 0.01) return;
-    
-    if (this.type === 'rain') {
-      this.renderRain(ctx, w, h);
-    } else if (this.type === 'fog') {
+    if (this.fog > 0.01) {
       this.renderFog(ctx, w, h);
+    }
+    if (this.rain > 0.01) {
+      this.renderRain(ctx, w, h);
     }
   }
   
   renderRain(ctx, w, h) {
     ctx.strokeStyle = '#8899aa';
-    ctx.globalAlpha = 0.4 * this.intensity;
+    ctx.globalAlpha = 0.5 * this.rain;
     ctx.lineWidth = 1;
     
     this.particles.forEach(p => {
@@ -81,30 +82,49 @@ export class WeatherSystem {
       
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.lineTo(x - 3, y + p.length);
+      ctx.lineTo(x - 4, y + p.length);
       ctx.stroke();
     });
     
     ctx.globalAlpha = 1;
     
     // Splashes on road (bottom half)
-    if (Math.random() < 0.3 * this.intensity) {
+    if (Math.random() < 0.5 * this.rain) {
       const sx = Math.random() * w;
-      const sy = h * 0.6 + Math.random() * h * 0.4;
+      const sy = h * 0.65 + Math.random() * h * 0.35;
       
       ctx.fillStyle = '#aabbcc';
-      ctx.globalAlpha = 0.5;
-      ctx.fillRect(sx, sy, 2, 2);
+      ctx.globalAlpha = 0.4;
+      ctx.fillRect(sx, sy, 3, 2);
       ctx.globalAlpha = 1;
     }
   }
   
   renderFog(ctx, w, h) {
-    const gradient = ctx.createLinearGradient(0, h * 0.4, 0, h);
-    gradient.addColorStop(0, 'rgba(200, 200, 210, 0)');
-    gradient.addColorStop(1, `rgba(200, 200, 210, ${0.4 * this.intensity})`);
+    // Distance-based atmospheric fog
+    const gradient = ctx.createLinearGradient(0, h * 0.3, 0, h);
+    const color = `200, 210, 225`;
+    gradient.addColorStop(0, `rgba(${color}, 0)`);
+    gradient.addColorStop(0.3, `rgba(${color}, ${0.2 * this.fog})`);
+    gradient.addColorStop(1, `rgba(${color}, ${0.7 * this.fog})`);
     
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
+
+    // Subtle drifting fog patches
+    if (this.fog > 0.3) {
+      ctx.save();
+      ctx.globalAlpha = this.fog * 0.2;
+      for (let i = 0; i < 5; i++) {
+        const x = ((Date.now() * 0.02 + i * 1000) % w);
+        const y = h * 0.5 + Math.sin(Date.now() * 0.001 + i) * 20;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 200);
+        grad.addColorStop(0, `rgba(${color}, 0.5)`);
+        grad.addColorStop(1, `rgba(${color}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - 200, y - 200, 400, 400);
+      }
+      ctx.restore();
+    }
   }
 }

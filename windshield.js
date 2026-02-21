@@ -10,8 +10,8 @@ export class WindshieldFX {
   }
   
   update(dt) {
-    // Add raindrops based on weather
-    if (this.weather.type === 'rain' && this.weather.intensity > 0.1) {
+    // Add raindrops based on weather spectrum
+    if (this.weather.rain > 0.05) {
       this.addRaindrops(dt);
     }
     
@@ -23,13 +23,13 @@ export class WindshieldFX {
       });
     });
     
-    // Update condensation
-    const targetCondensation = this.weather.type === 'rain' ? 0.2 : 0;
-    this.condensation += (targetCondensation - this.condensation) * dt;
+    // Update condensation based on both rain and fog
+    const targetCondensation = Math.max(this.weather.rain * 0.3, this.weather.fog * 0.1);
+    this.condensation += (targetCondensation - this.condensation) * dt * 0.5;
   }
   
   addRaindrops(dt) {
-    const spawnRate = this.weather.intensity * 5;
+    const spawnRate = this.weather.rain * 15;
     
     if (Math.random() < spawnRate * dt) {
       // Main windshield

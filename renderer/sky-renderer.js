@@ -1,9 +1,27 @@
 export class SkyRenderer {
   render(ctx, w, h, biome, time, horizonY) {
+    const { clouds } = biome.weather;
+
     // Sky Gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, horizonY);
     
-    const colors = biome.skyColors || ['#000', '#111', '#222'];
+    let colors = biome.skyColors || ['#000', '#111', '#222'];
+    
+    // Desaturate and darken sky based on cloud coverage
+    if (clouds > 0.1) {
+      colors = colors.map(c => {
+        // Simple hex-based darkening/desaturation for the "spectrum"
+        const r = parseInt(c.substring(1, 3), 16);
+        const g = parseInt(c.substring(3, 5), 16);
+        const b = parseInt(c.substring(5, 7), 16);
+        const gray = (r + g + b) / 3;
+        const nr = Math.round(r + (gray - r) * clouds) * (1 - clouds * 0.5);
+        const ng = Math.round(g + (gray - g) * clouds) * (1 - clouds * 0.5);
+        const nb = Math.round(b + (gray - b) * clouds) * (1 - clouds * 0.5);
+        return `#${Math.floor(nr).toString(16).padStart(2, '0')}${Math.floor(ng).toString(16).padStart(2, '0')}${Math.floor(nb).toString(16).padStart(2, '0')}`;
+      });
+    }
+
     colors.forEach((color, i) => {
       gradient.addColorStop(i / (colors.length - 1), color);
     });
