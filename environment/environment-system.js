@@ -78,31 +78,45 @@ export class EnvironmentSystem {
   
   renderFeature(ctx, f, w, h) {
     const relDist = f.distance - this.road.distance;
+    if (relDist > CONST.ENV_VIEW_DISTANCE) return;
+
+    // Calculate visibility (0.0 at 500m, 1.0 at 450m)
+    const visibility = Math.min(1, Math.max(0, (CONST.ENV_VIEW_DISTANCE - relDist) / CONST.FADE_IN_DISTANCE));
     
-    // Apply fade-in scaling for objects at the far distance limit
-    const fadeFactor = Math.min(1, Math.max(0, (CONST.ENV_VIEW_DISTANCE - relDist) / CONST.FADE_IN_DISTANCE));
+    const sideMultiplier = f.side === 'left' ? -1 : 1;
+    const lateral = f.offset * sideMultiplier;
+    const pos = this.road.projectPoint(lateral, 0, relDist, w, h);
+    if (pos.scale <= 0) return;
+
+    ctx.save();
+    
+    // "Rising over horizon" effect: objects slide up from behind the ground plane
+    if (visibility < 1.0) {
+      const objHeight = f.height || 5;
+      const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE;
+      const risingOffset = (1 - visibility) * pixelHeight;
+      
+      // Shift context down and clip at the base (horizon-aligned ground plane at this distance)
+      ctx.translate(0, risingOffset);
+      ctx.beginPath();
+      ctx.rect(0, 0, w, pos.y); 
+      ctx.clip();
+    }
+
+    const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE;
 
     if (f.type.startsWith('building_') || f.buildingType) {
-      renderBuilding(ctx, w, h, f, this.road, fadeFactor);
-    } else {
-      const sideMultiplier = f.side === 'left' ? -1 : 1;
-      const lateral = f.offset * sideMultiplier;
-      const pos = this.road.projectPoint(lateral, 0, relDist, w, h);
-      if (pos.scale <= 0) return;
-
-      const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE * fadeFactor;
-
-      if (f.type === 'tree') {
-        renderTree(ctx, pos.x, pos.y, renderScale, f);
-      } else if (f.type === 'lightpole') {
-        // Calculate exit fade for lights as they pass the camera
-        // Start fading at 8m, fully out by -5m (to avoid perspective singularity at -8m)
-        const exitFade = Math.max(0, Math.min(1, (relDist - (-5)) / (8 - (-5))));
-        renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade);
-      } else if (f.type === 'bush') {
-        renderBush(ctx, pos.x, pos.y, renderScale, f);
-      }
+      renderBuilding(ctx, w, h, f, this.road, 1.0);
+    } else if (f.type === 'tree') {
+      renderTree(ctx, pos.x, pos.y, renderScale, f);
+    } else if (f.type === 'lightpole') {
+      const exitFade = Math.max(0, Math.min(1, (relDist - (-5)) / (8 - (-5))));
+      renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade);
+    } else if (f.type === 'bush') {
+      renderBush(ctx, pos.x, pos.y, renderScale, f);
     }
+    
+    ctx.restore();
   }
 
 }
