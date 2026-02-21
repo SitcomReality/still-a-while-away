@@ -30,13 +30,23 @@ export class WindshieldFX {
       const x = Math.random();
       const y = Math.random() * 0.9; // Bias away from the very top edge where cabin overlay starts
 
-      // Origin for the "halo" effect is bottom-center
-      const originX = 0.5;
-      const originY = 1.0;
+      // Origin for the "halo" effect is bottom-center with slight random offset for asymmetry
+      const originX = 0.5 + (Math.random() - 0.5) * 0.3;
+      const originY = 1.0 + (Math.random() - 0.5) * 0.2;
 
       // Calculate direction vector from origin to spawn point
-      const dx = x - originX;
-      const dy = y - originY;
+      let dx = x - originX;
+      let dy = y - originY;
+      
+      // Add a random angle perturbation to the direction
+      const angleOffset = (Math.random() - 0.5) * 0.25;
+      const cos = Math.cos(angleOffset);
+      const sin = Math.sin(angleOffset);
+      const rdx = dx * cos - dy * sin;
+      const rdy = dx * sin + dy * cos;
+      dx = rdx;
+      dy = rdy;
+
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       // Guard against spawning exactly at the origin
@@ -46,9 +56,9 @@ export class WindshieldFX {
           dirX: dx / dist,
           dirY: dy / dist,
           progress: 0,
-          speed: 0.4 + Math.random() * 0.6,
-          length: 0.05 + Math.random() * 0.1,
-          opacity: 0.4 + Math.random() * 0.4
+          speed: 0.3 + Math.random() * 0.5,
+          length: 0.04 + Math.random() * 0.08,
+          opacity: 0.3 + Math.random() * 0.5
         });
       }
     }
@@ -72,15 +82,19 @@ export class WindshieldFX {
     ctx.lineWidth = 1.5;
     
     this.streaks.forEach(s => {
+      // Use quadratic easing for acceleration: starts slow, ends fast
+      const easedProgress = s.progress * s.progress;
+      const travelScale = 0.6; // How far they travel total
+
       // Current tail of the streak
-      const tailX = (s.x + s.dirX * s.progress * 0.5) * w;
-      const tailY = (s.y + s.dirY * s.progress * 0.5) * h;
+      const tailX = (s.x + s.dirX * easedProgress * travelScale) * w;
+      const tailY = (s.y + s.dirY * easedProgress * travelScale) * h;
       
-      // Current head of the streak
-      const headX = (s.x + s.dirX * (s.progress * 0.5 + s.length)) * w;
-      const headY = (s.y + s.dirY * (s.progress * 0.5 + s.length)) * h;
+      // Current head of the streak (slightly longer due to acceleration)
+      const headX = (s.x + s.dirX * (easedProgress * travelScale + s.length)) * w;
+      const headY = (s.y + s.dirY * (easedProgress * travelScale + s.length)) * h;
       
-      ctx.globalAlpha = s.opacity * (1 - s.progress);
+      ctx.globalAlpha = s.opacity * (1 - s.progress); // Fade out linearly over time
       ctx.beginPath();
       ctx.moveTo(tailX, tailY);
       ctx.lineTo(headX, headY);
