@@ -2,6 +2,7 @@ import { CanvasManager } from './renderer/canvas-manager.js';
 import { SkyRenderer } from './renderer/sky-renderer.js';
 import { HillRenderer } from './renderer/hill-renderer.js';
 import { UIRenderer } from './renderer/ui-renderer.js';
+import { lerpColor } from './utils.js';
 import * as CONST from './constants.js';
 
 export class Renderer {
