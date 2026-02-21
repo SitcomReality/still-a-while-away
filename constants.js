@@ -40,5 +40,4 @@ export const TRAFFIC_REMOVAL_THRESHOLD = -10;
 
 // Heading and UI
 export const HEADING_SENSITIVITY = 2;
-export const COMPASS_WIDTH = 300;
-export const COMPASS_HEIGHT = 40;
+export const COMMUNITY_DISCORD_URL = "https://discord.gg/k9hwff58";

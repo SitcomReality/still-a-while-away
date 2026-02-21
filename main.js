@@ -6,6 +6,7 @@ import { WeatherSystem } from './weather.js';
 import { WindshieldFX } from './windshield.js';
 import { BiomeManager } from './biomes.js';
 import { DevMenu } from './dev-menu.js';
+import { COMMUNITY_DISCORD_URL } from './constants.js';
 
 class Game {
   constructor() {
@@ -19,6 +20,8 @@ class Game {
     this.devMenu = new DevMenu(this);
     
     this.time = 0;
+    this.sessionTime = 0;
+    this.inviteHandled = false;
     this.lastTime = performance.now();
     
     this.init();
@@ -27,6 +30,20 @@ class Game {
   init() {
     // Set initial biome randomly
     this.biomes.currentBiomeIndex = Math.floor(Math.random() * this.biomes.biomeTypes.length);
+
+    // Setup Discord Link
+    const linkEl = document.getElementById('discord-link');
+    if (linkEl) linkEl.href = COMMUNITY_DISCORD_URL;
+
+    // Close Button logic
+    const closeBtn = document.getElementById('close-invite');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        const panel = document.getElementById('community-invite');
+        if (panel) panel.classList.remove('active');
+        this.inviteHandled = true; // Prevents it from reappearing
+      };
+    }
     
     // Start game loop
     requestAnimationFrame((t) => this.loop(t));
@@ -42,6 +59,13 @@ class Game {
     // Update systems
     biomes.update(dt, this.time);
     road.update(dt, biomes.current);
+
+    this.sessionTime += dt;
+    if (this.sessionTime >= 60 && !this.inviteHandled) {
+      const panel = document.getElementById('community-invite');
+      if (panel) panel.classList.add('active');
+      this.inviteHandled = true; // Ensure we only trigger the 'show' logic once
+    }
     traffic.update(dt, biomes.current);
     environment.update(dt, biomes.current);
     weather.update(dt, biomes.current);

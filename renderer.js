@@ -97,7 +97,6 @@ export class Renderer {
 
     // 6. UI Layer
     ctxs.ui.clearRect(0, 0, w, h);
-    this.uiRenderer.renderCompass(ctxs.ui, w, h, state.road.heading);
 
     if (state.debug) {
       this.renderDebugVisuals(ctxs.ui, w, h, state);

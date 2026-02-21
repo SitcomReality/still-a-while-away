@@ -126,6 +126,51 @@
       margin-top: 5px;
       color: #aaa;
     }
+
+    #community-invite {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid #444;
+      padding: 12px 20px;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      z-index: 1200;
+      width: 280px;
+      text-align: center;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    #community-invite.active {
+      display: block;
+    }
+
+    #community-invite a {
+      color: #0f0;
+      text-decoration: underline;
+      pointer-events: auto;
+    }
+
+    #community-invite .close-btn {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      cursor: pointer;
+      color: #666;
+      font-weight: bold;
+      pointer-events: auto;
+      font-size: 14px;
+    }
+
+    #community-invite .close-btn:hover {
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -138,6 +183,11 @@
     <canvas id="windshield-layer"></canvas>
     <canvas id="ui-layer"></canvas>
     <img id="cabin-overlay" src="/car_cabin_overlay.png" alt="">
+
+    <div id="community-invite">
+      <div class="close-btn" id="close-invite">×</div>
+      Join the <a id="discord-link" target="_blank">4th Wall Discord</a> to discuss this and other @SitcomReality experiments and games!
+    </div>
     
     <div id="dev-menu-container">
       <button id="dev-toggle">DEV TOOLS</button>
