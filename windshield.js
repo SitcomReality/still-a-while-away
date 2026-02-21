@@ -10,11 +10,13 @@ export class WindshieldFX {
       this.addStreaks(dt);
     }
     
-    // Update existing streaks (advance progress and drop expired)
-    this.streaks = this.streaks.filter(s => {
+    // Advance progress for all streaks; removal is handled when they move off-screen.
+    this.streaks.forEach(s => {
       s.progress += dt * s.speed;
-      return s.progress < 1;
     });
+    
+    // Remove streaks that have been flagged as off-screen by render()
+    this.streaks = this.streaks.filter(s => !s._remove);
     
     // Update background condensation haze
     const targetCondensation = Math.max(this.weather.rain * 0.3, this.weather.fog * 0.1);
@@ -65,7 +67,8 @@ export class WindshieldFX {
           width: 1.6 + Math.random() * 1.6, // larger max width than before (was 0.8 + rand*1.0)
           opacity: 0.2 + Math.random() * 0.4,
           seed: Math.random() * 100, // Random seed for jitter path
-          jitterScale: 0.004 + Math.random() * 0.012 // slightly lower jitter
+          jitterScale: 0.004 + Math.random() * 0.012, // slightly lower jitter
+          _remove: false
         });
       }
     }
@@ -86,20 +89,32 @@ export class WindshieldFX {
     this.streaks.forEach(s => {
       const easedProgress = s.progress * s.progress;
       const travelScale = 0.65;
-      const alpha = s.opacity * (1 - s.progress);
+      // Fade IN: alpha grows with progress (start invisible -> become visible)
+      const alpha = s.opacity * Math.min(1, s.progress);
       
       const currentLength = s.length + (s.maxLength - s.length) * s.progress;
       const perpX = -s.dirY;
       const perpY = s.dirX;
       
       const tailJitter = Math.sin(s.progress * 15 + s.seed) * s.jitterScale;
-      const tailX = (s.x + s.dirX * easedProgress * travelScale + perpX * tailJitter) * w;
-      const tailY = (s.y + s.dirY * easedProgress * travelScale + perpY * tailJitter) * h;
+      // Compute normalized (0-1) positions before scaling to pixels so we can test bounds
+      const tailNx = s.x + s.dirX * easedProgress * travelScale + perpX * tailJitter;
+      const tailNy = s.y + s.dirY * easedProgress * travelScale + perpY * tailJitter;
+      const tailX = tailNx * w;
+      const tailY = tailNy * h;
       
       const headProgress = easedProgress * travelScale + currentLength * (1 + s.progress * 0.5);
       const headJitter = Math.sin((s.progress + 0.1) * 15 + s.seed) * s.jitterScale;
-      const headX = (s.x + s.dirX * headProgress + perpX * headJitter) * w;
-      const headY = (s.y + s.dirY * headProgress + perpY * headJitter) * h;
+      const headNx = s.x + s.dirX * headProgress + perpX * headJitter;
+      const headNy = s.y + s.dirY * headProgress + perpY * headJitter;
+      const headX = headNx * w;
+      const headY = headNy * h;
+
+      // If the head has fully moved off-screen, mark for removal (droplet disappears by moving away)
+      if (headNx < -0.05 || headNx > 1.05 || headNy < -0.05 || headNy > 1.05) {
+        s._remove = true;
+        return; // skip drawing this frame (optionally could draw last frame)
+      }
 
       // Calculate the widest point of the diamond (the "hips")
       // We place it closer to the head to maintain a "leading" weight
