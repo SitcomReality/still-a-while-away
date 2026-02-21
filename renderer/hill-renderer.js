@@ -46,9 +46,11 @@ export class HillRenderer {
     ctx.closePath();
     ctx.fill();
 
-    // Subtle hill outline
-    ctx.strokeStyle = '#000000';
-    ctx.globalAlpha = 0.4;
+    // Subtle hill outline — blend the ridge color with fog so the edge matches atmospheric tint
+    const ridgeColor = lerpColor('#000000', fog.color, fogFactor);
+    ctx.strokeStyle = ridgeColor;
+    // Fade the outline slightly as fog increases so it doesn't remain stark through heavy fog
+    ctx.globalAlpha = 0.4 * (1.0 - Math.min(0.9, fog.intensity));
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.globalAlpha = 1;
