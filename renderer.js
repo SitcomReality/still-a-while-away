@@ -2,6 +2,7 @@ import { CanvasManager } from './renderer/canvas-manager.js';
 import { SkyRenderer } from './renderer/sky-renderer.js';
 import { HillRenderer } from './renderer/hill-renderer.js';
 import { UIRenderer } from './renderer/ui-renderer.js';
+import { lerpColor } from './utils.js';
 import * as CONST from './constants.js';
 
 export class Renderer {
@@ -31,7 +32,15 @@ export class Renderer {
     this.hillRenderer.render(ctxs.sky, w, h, horizonY, state.road.heading, state.biome, fog);
     
     // Ground Plane (Behind everything)
-    ctxs.sky.fillStyle = state.biome.groundColor;
+    const groundGradient = ctxs.sky.createLinearGradient(0, horizonY, 0, h);
+    const farFogFactor = Math.min(1, 1 / (1.1 - fog.intensity));
+    const midFogFactor = Math.min(1, 0.5 / (1.1 - fog.intensity));
+    
+    groundGradient.addColorStop(0, lerpColor(state.biome.groundColor, fog.color, farFogFactor));
+    groundGradient.addColorStop(0.5, lerpColor(state.biome.groundColor, fog.color, midFogFactor));
+    groundGradient.addColorStop(1, state.biome.groundColor);
+    
+    ctxs.sky.fillStyle = groundGradient;
     ctxs.sky.fillRect(0, horizonY, w, h - horizonY);
     
     // 2. Road layer
