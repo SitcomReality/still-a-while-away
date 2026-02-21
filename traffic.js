@@ -166,7 +166,7 @@ export class TrafficSystem {
     const lightColor = isSameDirection ? '#ff0000' : headlightColor;
     
     // Use a cubic ramp for brightness to make the appearance even more gradual
-    const arrivalRamp = Math.pow(fadeScale, 3);
+    const arrivalRamp = Math.pow(fadeScale, 25);
     const brightness = headlightIntensity * dimFactor * (isSameDirection ? 0.6 : 1.0) * arrivalRamp;
     const scale = quad[0].scale;
 
@@ -190,7 +190,7 @@ export class TrafficSystem {
       ctx.globalAlpha = 1;
     }
     
-    const coreSize = Math.max(1, (isSameDirection ? 6 : 8) * scale * fadeScale);
+    const coreSize = Math.max(0.5, (isSameDirection ? 6 : 8) * scale * fadeScale);
     ctx.fillStyle = lightColor;
     ctx.globalAlpha = brightness * 0.95;
     ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();

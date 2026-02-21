@@ -3,7 +3,7 @@
  */
 
 // Road Physical Properties
-export const ROAD_WIDTH = 12.0;      // Physical width in meters
+export const ROAD_WIDTH = 16;      // Physical width in meters
 export const CAMERA_X_OFFSET = -3.0;  // Camera offset from center (-3.0 = left lane center)
 export const ROAD_TOP_WIDTH = 0.02;   // Road width at the horizon (fractional)
 export const ROAD_SPEED = 20;         // Base driving speed (meters per second)
