@@ -10,7 +10,7 @@ export class WindshieldFX {
       this.addStreaks(dt);
     }
     
-    // Update existing streaks
+    // Update existing streaks (advance progress and drop expired)
     this.streaks = this.streaks.filter(s => {
       s.progress += dt * s.speed;
       return s.progress < 1;
@@ -46,17 +46,23 @@ export class WindshieldFX {
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       if (dist > 0.01) {
+        // Start with a much shorter base length and a lower max length,
+        // so streaks begin short and only grow to a modest size as they age.
+        const baseLength = 0.005 + Math.random() * 0.015;   // very short initial length
+        const maxLength = baseLength + 0.01 + Math.random() * 0.02; // modest max (shorter overall)
+        
         this.streaks.push({
           x, y,
           dirX: dx / dist,
           dirY: dy / dist,
           progress: 0,
           speed: 0.25 + Math.random() * 0.45,
-          length: 0.03 + Math.random() * 0.06,
-          width: 0.8 + Math.random() * 1.5,
+          length: baseLength,    // starting length
+          maxLength: maxLength,  // maximum length it will reach as it ages
+          width: 0.8 + Math.random() * 1.0, // slight reduction of max width variance
           opacity: 0.2 + Math.random() * 0.4,
           seed: Math.random() * 100, // Random seed for jitter path
-          jitterScale: 0.005 + Math.random() * 0.015 // How much it wiggles
+          jitterScale: 0.004 + Math.random() * 0.012 // slightly lower jitter
         });
       }
     }
@@ -79,17 +85,21 @@ export class WindshieldFX {
       const travelScale = 0.65;
       const alpha = s.opacity * (1 - s.progress);
       
+      // Gradually interpolate length from start to max based on progress (0..1)
+      const currentLength = s.length + (s.maxLength - s.length) * s.progress;
+      
       // Calculate perpendicular vector for jitter
       const perpX = -s.dirY;
       const perpY = s.dirX;
       
-      // Tail position with subtle jitter
+      // Tail position with subtle jitter — tails start very short because easedProgress*travelScale is small early
       const tailJitter = Math.sin(s.progress * 15 + s.seed) * s.jitterScale;
       const tailX = (s.x + s.dirX * easedProgress * travelScale + perpX * tailJitter) * w;
       const tailY = (s.y + s.dirY * easedProgress * travelScale + perpY * tailJitter) * h;
       
-      // Head position with slightly different jitter phase and stretched length
-      const headProgress = easedProgress * travelScale + s.length * (1 + s.progress * 0.5);
+      // Head position uses the currentLength so streaks lengthen as they age,
+      // but overall lengths are much shorter due to reduced base/max values.
+      const headProgress = easedProgress * travelScale + currentLength * (1 + s.progress * 0.5);
       const headJitter = Math.sin((s.progress + 0.1) * 15 + s.seed) * s.jitterScale;
       const headX = (s.x + s.dirX * headProgress + perpX * headJitter) * w;
       const headY = (s.y + s.dirY * headProgress + perpY * headJitter) * h;
