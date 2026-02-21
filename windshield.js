@@ -1,118 +1,89 @@
 export class WindshieldFX {
   constructor(weather) {
     this.weather = weather;
-    this.drops = {
-      main: [],
-      left: [],
-      right: []
-    };
+    this.streaks = [];
     this.condensation = 0;
   }
   
   update(dt) {
-    // Add raindrops based on weather spectrum
     if (this.weather.rain > 0.05) {
-      this.addRaindrops(dt);
+      this.addStreaks(dt);
     }
     
-    // Update existing drops
-    Object.keys(this.drops).forEach(section => {
-      this.drops[section] = this.drops[section].filter(drop => {
-        drop.progress += dt * drop.speed;
-        return drop.progress < 1;
-      });
+    // Update existing streaks
+    this.streaks = this.streaks.filter(s => {
+      s.progress += dt * s.speed;
+      return s.progress < 1;
     });
     
-    // Update condensation based on both rain and fog
+    // Update background condensation haze
     const targetCondensation = Math.max(this.weather.rain * 0.3, this.weather.fog * 0.1);
     this.condensation += (targetCondensation - this.condensation) * dt * 0.5;
   }
   
-  addRaindrops(dt) {
-    const spawnRate = this.weather.rain * 15;
+  addStreaks(dt) {
+    // Increased spawn rate for a more immersive feel
+    const spawnRate = this.weather.rain * 25;
     
     if (Math.random() < spawnRate * dt) {
-      // Main windshield (spawn near bottom to move up)
-      this.drops.main.push({
-        x: Math.random(),
-        y: 0.7 + Math.random() * 0.3,
-        progress: 0,
-        speed: 0.3 + Math.random() * 0.3,
-        length: 0.05 + Math.random() * 0.1
-      });
-    }
-    
-    // Side windows (spawn more centrally to move out and up)
-    if (Math.random() < spawnRate * dt * 0.5) {
-      const side = Math.random() > 0.5 ? 'left' : 'right';
-      this.drops[side].push({
-        x: 0.1 + Math.random() * 0.2,
-        y: 0.6 + Math.random() * 0.4,
-        progress: 0,
-        speed: 0.4 + Math.random() * 0.3,
-        length: 0.03 + Math.random() * 0.06,
-        angle: Math.PI / 6 // Diagonal
-      });
+      // Spawn point anywhere on the windshield surface
+      const x = Math.random();
+      const y = Math.random() * 0.9; // Bias away from the very top edge where cabin overlay starts
+
+      // Origin for the "halo" effect is bottom-center
+      const originX = 0.5;
+      const originY = 1.0;
+
+      // Calculate direction vector from origin to spawn point
+      const dx = x - originX;
+      const dy = y - originY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      // Guard against spawning exactly at the origin
+      if (dist > 0.01) {
+        this.streaks.push({
+          x, y,
+          dirX: dx / dist,
+          dirY: dy / dist,
+          progress: 0,
+          speed: 0.4 + Math.random() * 0.6,
+          length: 0.05 + Math.random() * 0.1,
+          opacity: 0.4 + Math.random() * 0.4
+        });
+      }
     }
   }
   
   render(ctx, w, h) {
-    // Render condensation
+    // 1. Background haze
     if (this.condensation > 0.01) {
       ctx.fillStyle = `rgba(180, 180, 190, ${this.condensation * 0.15})`;
-      
-      // Perlin-like noise pattern
       for (let i = 0; i < 100; i++) {
-        const x = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-        const y = (Math.sin(i * 78.233) * 43758.5453) % 1;
+        const rx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+        const ry = (Math.sin(i * 78.233) * 43758.5453) % 1;
         ctx.globalAlpha = this.condensation * 0.1;
-        ctx.fillRect(Math.abs(x) * w, Math.abs(y) * h * 0.7, 3, 3);
+        ctx.fillRect(Math.abs(rx) * w, Math.abs(ry) * h * 0.7, 3, 3);
       }
       ctx.globalAlpha = 1;
     }
     
-    // Render raindrops
+    // 2. Halo-style streaks
     ctx.strokeStyle = 'rgba(150, 170, 190, 0.6)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     
-    // Main windshield drops (vertical - moving UP)
-    this.drops.main.forEach(drop => {
-      const x = drop.x * w;
-      const startY = drop.y * h;
-      const endY = startY - drop.progress * h * 0.7;
+    this.streaks.forEach(s => {
+      // Current tail of the streak
+      const tailX = (s.x + s.dirX * s.progress * 0.5) * w;
+      const tailY = (s.y + s.dirY * s.progress * 0.5) * h;
       
-      ctx.globalAlpha = 0.6 * (1 - drop.progress);
-      ctx.beginPath();
-      ctx.moveTo(x, startY);
-      ctx.lineTo(x, endY);
-      ctx.stroke();
-    });
-    
-    // Left window drops (diagonal - moving UP and LEFT away from center)
-    this.drops.left.forEach(drop => {
-      const startX = drop.x * w;
-      const startY = drop.y * h;
-      const endX = startX - drop.progress * w * 0.2;
-      const endY = startY - drop.progress * h * 0.4;
+      // Current head of the streak
+      const headX = (s.x + s.dirX * (s.progress * 0.5 + s.length)) * w;
+      const headY = (s.y + s.dirY * (s.progress * 0.5 + s.length)) * h;
       
-      ctx.globalAlpha = 0.5 * (1 - drop.progress);
+      ctx.globalAlpha = s.opacity * (1 - s.progress);
       ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
-      ctx.stroke();
-    });
-    
-    // Right window drops (diagonal - moving UP and RIGHT away from center)
-    this.drops.right.forEach(drop => {
-      const startX = w - (drop.x * w);
-      const startY = drop.y * h;
-      const endX = startX + drop.progress * w * 0.2;
-      const endY = startY - drop.progress * h * 0.4;
-      
-      ctx.globalAlpha = 0.5 * (1 - drop.progress);
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(headX, headY);
       ctx.stroke();
     });
     
