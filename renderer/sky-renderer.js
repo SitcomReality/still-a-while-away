@@ -1,3 +1,5 @@
+import { lerpColor } from '../utils.js';
+
 export class SkyRenderer {
   render(ctx, w, h, biome, time, horizonY) {
     const { clouds } = biome.weather;
