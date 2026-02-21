@@ -33,7 +33,6 @@ export const ENV_VIEW_DISTANCE = 800;
 export const ENV_REMOVAL_THRESHOLD = -20;
 export const ENV_GLOBAL_SCALE = 160;  // Pixels per meter at perspective scale 1.0
 export const FADE_IN_DISTANCE = 200;   // Distance over which objects "grow" in
-export const FOG_MAX_DISTANCE = 800;   // Distance where fog becomes opaque at 50% density
 
 // Traffic
 export const TRAFFIC_RENDER_LIMIT = 800;

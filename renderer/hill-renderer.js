@@ -1,4 +1,5 @@
 import { noise, lerpColor } from '../utils.js';
+import * as CONST from '../constants.js';
 
 export class HillRenderer {
   constructor() {
@@ -15,10 +16,10 @@ export class HillRenderer {
     };
   }
 
-  render(ctx, w, h, horizonY, heading, biome) {
-    // Hills are effectively at infinite distance, so they take full horizon fog
-    const fogMix = Math.min(1, biome.weather.fog / 0.5);
-    ctx.fillStyle = lerpColor(biome.groundColor, biome.weather.fogColor, fogMix);
+  render(ctx, w, h, horizonY, heading, biome, fog) {
+    // Hills are at the horizon, so they use the maximum fog factor for that distance
+    const fogFactor = Math.min(1, (CONST.VIEW_DISTANCE / CONST.VIEW_DISTANCE) / (1.1 - fog.intensity));
+    ctx.fillStyle = lerpColor(biome.groundColor, fog.color, fogFactor);
     ctx.beginPath();
     ctx.moveTo(0, h);
 

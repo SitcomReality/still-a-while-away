@@ -1,4 +1,4 @@
-import { noise } from './utils.js';
+import { noise, lerpColor } from './utils.js';
 import * as CONST from './constants.js';
 import { adjustBrightness, bilinearMap, drawQuad, renderGlow } from './environment/renderers/utils.js';
 
@@ -61,19 +61,23 @@ export class TrafficSystem {
   
 
 
-  renderVehicle(ctx, v, w, h, state) {
+  renderVehicle(ctx, v, w, h, fog) {
     const visibility = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
+    // For vehicles, we allow the scale to go all the way to 0 at the horizon for a "tiny point" effect
     const scaleFactor = visibility;
-    const laneOffset = v.lane === 'right' ? CONST.ROAD_WIDTH * 0.25 : -CONST.ROAD_WIDTH * 0.25;
     
     ctx.save();
     
     if (visibility < 1.0) {
+      const roadW = CONST.ROAD_WIDTH;
+      const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
       const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
+      
       const objHeight = 1.4 * v.height;
       const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE * scaleFactor;
       const risingOffset = (1 - visibility) * pixelHeight;
 
+      // Clip before translating so the mask stays fixed relative to the road ground
       ctx.beginPath();
       ctx.rect(0, 0, w, pos.y);
       ctx.clip();
@@ -82,32 +86,15 @@ export class TrafficSystem {
     }
 
     if (v.distance < 250) {
-      this.renderVehicle3D(ctx, w, h, v, scaleFactor);
+      this.renderVehicle3D(ctx, w, h, v, scaleFactor, fog);
     } else {
-      this.renderVehicleLOD(ctx, w, h, v, scaleFactor);
-    }
-
-    // Apply depth-based fog over vehicle
-    const fogDensity = state.biome.weather.fog;
-    const fogColor = state.biome.weather.fogColor;
-    const fogMix = (v.distance / 800) * (fogDensity / 0.5);
-    if (fogMix > 0.01) {
-      const laneOffset = v.lane === 'right' ? CONST.ROAD_WIDTH * 0.25 : -CONST.ROAD_WIDTH * 0.25;
-      const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
-      const objH = 1.4 * v.height;
-      const topPos = this.road.projectPoint(laneOffset, objH, v.distance, w, h);
-      const pixelH = (pos.y - topPos.y);
-      const pixelW = 1.8 * scaleFactor * pos.scale * CONST.ENV_GLOBAL_SCALE;
-      
-      ctx.globalAlpha = Math.min(1, fogMix);
-      ctx.fillStyle = fogColor;
-      ctx.fillRect(pos.x - pixelW/2, topPos.y, pixelW, pixelH);
+      this.renderVehicleLOD(ctx, w, h, v, scaleFactor, fog);
     }
     
     ctx.restore();
   }
 
-  renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0) {
+  renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0, fog) {
     const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
     const carWidth = 1.8 * fadeScale; 
@@ -122,11 +109,12 @@ export class TrafficSystem {
 
     const quad = [nbl, nbr, ntr, ntl];
     const dimFactor = 1.0;
-    this.renderVehicleSilhouette(ctx, quad, v);
-    this.renderLights(ctx, quad, v, dimFactor, fadeScale);
+    const fogFactor = Math.min(1, (v.distance / CONST.TRAFFIC_RENDER_LIMIT) / (1.1 - fog.intensity));
+    this.renderVehicleSilhouette(ctx, quad, v, fog, fogFactor);
+    this.renderLights(ctx, quad, v, dimFactor, fadeScale, fog, fogFactor);
   }
 
-  renderVehicle3D(ctx, w, h, v, fadeScale = 1.0) {
+  renderVehicle3D(ctx, w, h, v, fadeScale = 1.0, fog) {
     const zNear = Math.max(0.1, v.distance);
     const zFar = v.distance + v.depth;
     const curveRef = v.distance;
@@ -151,32 +139,34 @@ export class TrafficSystem {
     const ftr = this.road.projectPoint(rOff, carHeight, zFar, w, h, curveRef);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
+    const fogFactor = Math.min(1, (v.distance / CONST.TRAFFIC_RENDER_LIMIT) / (1.1 - fog.intensity));
     
     // Draw Surfaces
-    ctx.fillStyle = adjustBrightness(v.color, -40);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -40), fog.color, fogFactor);
     drawQuad(ctx, [fbl, fbr, ftr, ftl]); // Far
 
-    ctx.fillStyle = adjustBrightness(v.color, -20);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -20), fog.color, fogFactor);
     if (nbl.x > fbl.x) drawQuad(ctx, [nbl, fbl, ftl, ntl]); // Left
     if (nbr.x < fbr.x) drawQuad(ctx, [nbr, fbr, ftr, ntr]); // Right
 
     if (ntl.y > ftl.y) {
-      ctx.fillStyle = adjustBrightness(v.color, 10);
+      ctx.fillStyle = lerpColor(adjustBrightness(v.color, 10), fog.color, fogFactor);
       drawQuad(ctx, [ntl, ntr, ftr, ftl]); // Top
     }
 
-    this.renderVehicleSilhouette(ctx, nearQuad, v);
+    this.renderVehicleSilhouette(ctx, nearQuad, v, fog, fogFactor);
 
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
     const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
-    this.renderLights(ctx, nearQuad, v, dimFactor, fadeScale);
+    this.renderLights(ctx, nearQuad, v, dimFactor, fadeScale, fog, fogFactor);
   }
 
-  renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0) {
+  renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0, fog, fogFactor) {
     const { lane, headlightColor, headlightIntensity } = vehicle;
     const isSameDirection = lane === 'left';
-    const lightColor = isSameDirection ? '#ff0000' : headlightColor;
+    const lightColorRaw = isSameDirection ? '#ff0000' : headlightColor;
+    const lightColor = lerpColor(lightColorRaw, fog.color, fogFactor);
     
     // Use a cubic ramp for brightness to make the appearance even more gradual
     const arrivalRamp = Math.pow(fadeScale, 25);
@@ -211,7 +201,7 @@ export class TrafficSystem {
     ctx.globalAlpha = 1;
   }
   
-  renderVehicleSilhouette(ctx, quad, vehicle) {
+  renderVehicleSilhouette(ctx, quad, vehicle, fog, fogFactor) {
     const scale = quad[0].scale;
     const size = CONST.TRAFFIC_SIZE_SCALE * scale;
     if (size < 4) return;
@@ -219,13 +209,13 @@ export class TrafficSystem {
     const width = Math.abs(quad[1].x - quad[0].x);
     const centerX = (quad[0].x + quad[1].x) / 2;
     
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillStyle = lerpColor('rgba(0,0,0,0.5)', fog.color, fogFactor);
     ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
 
-    ctx.fillStyle = vehicle.color;
+    ctx.fillStyle = lerpColor(vehicle.color, fog.color, fogFactor);
     drawQuad(ctx, quad);
     
-    ctx.fillStyle = '#0a0a0f';
+    ctx.fillStyle = lerpColor('#0a0a0f', fog.color, fogFactor);
     drawQuad(ctx, [
       bilinearMap(quad, 0.1, 0.5),
       bilinearMap(quad, 0.9, 0.5),

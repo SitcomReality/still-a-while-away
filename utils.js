@@ -23,19 +23,6 @@ export function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-/**
- * Calculates a fog factor (0-1) based on distance and fogginess.
- * At fogginess 0.5 (50%), things at FOG_MAX_DISTANCE are fully fogged.
- */
-export function getFogFactor(distance, fogginess) {
-  if (fogginess <= 0) return 0;
-  // Intensity 0.5 means full fog at MAX_DISTANCE.
-  // We scale the distance by (fogginess / 0.5)
-  const viewScale = fogginess / 0.5;
-  const factor = (distance / 800) * viewScale;
-  return Math.min(1, Math.max(0, factor));
-}
-
 // Color interpolation for hex strings
 export function lerpColor(c1, c2, t) {
   const r1 = parseInt(c1.substring(1, 3), 16);

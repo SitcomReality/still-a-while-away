@@ -2,7 +2,6 @@ import { CanvasManager } from './renderer/canvas-manager.js';
 import { SkyRenderer } from './renderer/sky-renderer.js';
 import { HillRenderer } from './renderer/hill-renderer.js';
 import { UIRenderer } from './renderer/ui-renderer.js';
-import { lerpColor } from './utils.js';
 import * as CONST from './constants.js';
 
 export class Renderer {
@@ -21,24 +20,23 @@ export class Renderer {
     // Calculate global horizon Y for this frame
     const horizonY = state.road.getHorizon(h);
     
+    // Calculate fog state
+    const fog = {
+      color: state.biome.fogColor,
+      intensity: state.weather.fog
+    };
+
     // 1. Sky layer & Hills
-    this.skyRenderer.render(ctxs.sky, w, h, state.biome, state.time, horizonY);
-    this.hillRenderer.render(ctxs.sky, w, h, horizonY, state.road.heading, state.biome);
+    this.skyRenderer.render(ctxs.sky, w, h, state.biome, state.time, horizonY, fog);
+    this.hillRenderer.render(ctxs.sky, w, h, horizonY, state.road.heading, state.biome, fog);
     
     // Ground Plane (Behind everything)
-    // The ground plane needs distance-based fog too. 
-    // We render it as a gradient from horizon (full fog) to foreground.
-    const groundGrad = ctxs.sky.createLinearGradient(0, horizonY, 0, h);
-    const fogAtHorizon = Math.min(1, state.biome.weather.fog / 0.5);
-    groundGrad.addColorStop(0, lerpColor(state.biome.groundColor, state.biome.weather.fogColor, fogAtHorizon));
-    groundGrad.addColorStop(1, state.biome.groundColor);
-    
-    ctxs.sky.fillStyle = groundGrad;
+    ctxs.sky.fillStyle = state.biome.groundColor;
     ctxs.sky.fillRect(0, horizonY, w, h - horizonY);
     
     // 2. Road layer
     ctxs.road.clearRect(0, 0, w, h);
-    state.road.render(ctxs.road, w, h, state.biome);
+    state.road.render(ctxs.road, w, h, fog);
 
     // 3. Depth-sorted world objects (Environment + Traffic)
     ctxs.env.clearRect(0, 0, w, h);
@@ -74,9 +72,9 @@ export class Renderer {
     
     renderables.forEach(item => {
       if (item.type === 'env') {
-        state.environment.renderFeature(ctxs.traffic, item.data, w, h, state);
+        state.environment.renderFeature(ctxs.traffic, item.data, w, h, fog);
       } else {
-        state.traffic.renderVehicle(ctxs.traffic, item.data, w, h, state);
+        state.traffic.renderVehicle(ctxs.traffic, item.data, w, h, fog);
       }
     });
     

@@ -1,7 +1,8 @@
 import { lerpColor } from '../utils.js';
+import * as CONST from '../constants.js';
 
 export class SkyRenderer {
-  render(ctx, w, h, biome, time, horizonY) {
+  render(ctx, w, h, biome, time, horizonY, fog) {
     const { clouds } = biome.weather;
 
     // Sky Gradient
@@ -25,15 +26,11 @@ export class SkyRenderer {
     }
 
     colors.forEach((color, i) => {
-      // Lerp sky colors toward fog color near the horizon if fog is present
-      let finalColor = color;
-      if (biome.weather.fog > 0) {
-        // Higher stops (closer to top of screen) are less fogged
-        const stopFactor = i / (colors.length - 1); // 0 at top, 1 at horizon
-        const fogMix = stopFactor * Math.min(1, biome.weather.fog / 0.5);
-        finalColor = lerpColor(color, biome.weather.fogColor, fogMix);
-      }
-      gradient.addColorStop(i / (colors.length - 1), finalColor);
+      // Blend sky colors with fog color based on intensity
+      // Sky is effectively at infinite distance, so it uses max fog factor
+      const fogFactor = Math.min(1, fog.intensity * 2.0); // Sky obscures fast
+      const blended = lerpColor(color, fog.color, fogFactor);
+      gradient.addColorStop(i / (colors.length - 1), blended);
     });
     
     ctx.fillStyle = gradient;

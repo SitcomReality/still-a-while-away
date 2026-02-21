@@ -1,4 +1,6 @@
-export function renderBush(ctx, x, y, scale, bush) {
+import { lerpColor } from '../../utils.js';
+
+export function renderBush(ctx, x, y, scale, bush, fog = null, fogFactor = 0) {
   const height = bush.height * scale;
   const width = bush.width * scale;
   
@@ -6,7 +8,7 @@ export function renderBush(ctx, x, y, scale, bush) {
   if (height < 1.5 || width < 1.5) return;
   
   // Solid, opaque elliptical shrub (no transparency)
-  ctx.fillStyle = bush.color;
+  ctx.fillStyle = fog ? lerpColor(bush.color, fog.color, fogFactor) : bush.color;
   ctx.beginPath();
   // Draw a rounded/elliptical shape sitting on the ground
   ctx.ellipse(x, y - height * 0.45, width * 0.5, height * 0.55, 0, 0, Math.PI * 2);

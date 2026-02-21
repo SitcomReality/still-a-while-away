@@ -63,13 +63,10 @@ export class WeatherSystem {
   }
   
   render(ctx, w, h) {
-    // Atmospheric fog is now integrated into object/road rendering.
-    // We only render active particles or localized effects here.
+    // Note: Fog is now rendered as part of other systems via color shifting.
+    // This layer is primarily for precipitation FX.
     if (this.rain > 0.01) {
       this.renderRain(ctx, w, h);
-    }
-    if (this.fog > 0.3) {
-      this.renderFogPatches(ctx, w, h);
     }
   }
   
@@ -102,20 +99,5 @@ export class WeatherSystem {
     }
   }
   
-  renderFogPatches(ctx, w, h) {
-    const color = `200, 210, 225`;
-    // Subtle drifting fog patches
-    ctx.save();
-    ctx.globalAlpha = this.fog * 0.2;
-    for (let i = 0; i < 5; i++) {
-      const x = ((Date.now() * 0.02 + i * 1000) % w);
-      const y = h * 0.5 + Math.sin(Date.now() * 0.001 + i) * 20;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, 200);
-      grad.addColorStop(0, `rgba(${color}, 0.5)`);
-      grad.addColorStop(1, `rgba(${color}, 0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(x - 200, y - 200, 400, 400);
-    }
-    ctx.restore();
-  }
+
 }

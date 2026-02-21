@@ -17,13 +17,13 @@ export class BiomeManager {
 
     // Define sky/lighting states for time of day
     this.timeStates = [
-      { time: 0.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 1.0 },
-      { time: 0.2,  name: 'sunrise', colors: ['#1a2a44', '#ff9e6d', '#ffdb99'], ground: '#1a150a', ambient: 0.5, stars: 0.2 },
-      { time: 0.3,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', ambient: 1.0, stars: 0.0 },
-      { time: 0.7,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', ambient: 1.0, stars: 0.0 },
-      { time: 0.8,  name: 'sunset',  colors: ['#0f1419', '#d87855', '#ffa563'], ground: '#1a1005', ambient: 0.6, stars: 0.1 },
-      { time: 0.9,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 0.8 },
-      { time: 1.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', ambient: 0.1, stars: 1.0 }
+      { time: 0.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', fog: '#0a0a1a', ambient: 0.1, stars: 1.0 },
+      { time: 0.2,  name: 'sunrise', colors: ['#1a2a44', '#ff9e6d', '#ffdb99'], ground: '#1a150a', fog: '#ffdb99', ambient: 0.5, stars: 0.2 },
+      { time: 0.3,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', fog: '#b0e2ff', ambient: 1.0, stars: 0.0 },
+      { time: 0.7,  name: 'day',     colors: ['#4a90e2', '#87ceeb', '#b0e2ff'], ground: '#1a2a1a', fog: '#b0e2ff', ambient: 1.0, stars: 0.0 },
+      { time: 0.8,  name: 'sunset',  colors: ['#0f1419', '#d87855', '#ffa563'], ground: '#1a1005', fog: '#ffa563', ambient: 0.6, stars: 0.1 },
+      { time: 0.9,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', fog: '#0a0a1a', ambient: 0.1, stars: 0.8 },
+      { time: 1.0,  name: 'night',   colors: ['#020205', '#050512', '#0a0a1a'], ground: '#020402', fog: '#0a0a1a', ambient: 0.1, stars: 1.0 }
     ];
 
     this.weather = {
@@ -100,19 +100,21 @@ export class BiomeManager {
     const weatherFactor = 1.0 - (this.weather.clouds * 0.7);
     const starFactor = 1.0 - Math.max(this.weather.clouds, this.weather.fog);
 
+    const fogColor = lerpColor(s1.fog, s2.fog, t);
+    
     return {
       type: biome.id,
       timeValue: this.timeValue,
       name: t < 0.5 ? s1.name : s2.name,
       skyColors,
       groundColor: lerpColor(s1.ground, s2.ground, t),
+      fogColor,
       ambient: lerp(s1.ambient, s2.ambient, t) * weatherFactor,
       stars: lerp(s1.stars, s2.stars, t) * starFactor,
       weather: {
         rain: this.weather.rain,
         fog: this.weather.fog,
         clouds: this.weather.clouds,
-        fogColor: '#c8d2e1', // Base fog color (cool gray-blue)
         type: this.weather.rain > 0.2 ? 'rain' : (this.weather.fog > 0.2 ? 'fog' : 'clear')
       },
       trafficDensity: trafficByType[biome.id] || 0.5,
