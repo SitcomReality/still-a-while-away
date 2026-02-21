@@ -40,7 +40,7 @@ export class Renderer {
     // Gather features
     state.environment.features.forEach(f => {
       const relDist = f.distance - state.road.distance;
-      if (relDist > 0 && relDist < 500) {
+      if (relDist > 0 && relDist < CONST.ENV_VIEW_DISTANCE) {
         renderables.push({
           z: relDist + (f.depth ? f.depth / 2 : 0),
           type: 'env',
@@ -51,7 +51,7 @@ export class Renderer {
     
     // Gather vehicles
     state.traffic.vehicles.forEach(v => {
-      if (v.distance > 0 && v.distance < 500) {
+      if (v.distance > 0 && v.distance < CONST.TRAFFIC_RENDER_LIMIT) {
         renderables.push({
           z: v.distance + (v.depth || 0),
           type: 'traffic',

@@ -7,8 +7,8 @@ export const ROAD_WIDTH = 12.0;      // Physical width in meters
 export const CAMERA_X_OFFSET = -3.0;  // Camera offset from center (-3.0 = left lane center)
 export const ROAD_TOP_WIDTH = 0.02;   // Road width at the horizon (fractional)
 export const ROAD_SPEED = 20;         // Base driving speed (meters per second)
-export const ROAD_SEGMENTS = 70;      // Number of polygons used to draw the road
-export const VIEW_DISTANCE = 500;     // How far ahead the road is rendered
+export const ROAD_SEGMENTS = 100;     // Number of polygons used to draw the road
+export const VIEW_DISTANCE = 800;     // How far ahead the road is rendered
 
 // Perspective and Camera
 export const PERSPECTIVE_K = 8;      // Projection constant (y ~ 1/z)
@@ -26,16 +26,16 @@ export const MARKING_SPACING = 32;     // Distance between dashes
 export const MARKING_BATCH_SIZE = 50; // Pre-generated marking count
 export const MARKING_DASH_LENGTH = 8;    // Physical length of the dash in world space
 export const MARKING_WIDTH_SCALE = 40;   // Width multiplier based on perspective
-export const MARKING_RENDER_LIMIT = 350; // Distance beyond which markings aren't drawn
+export const MARKING_RENDER_LIMIT = 600; // Distance beyond which markings aren't drawn
 
 // Environment & World
-export const ENV_VIEW_DISTANCE = 500;
+export const ENV_VIEW_DISTANCE = 800;
 export const ENV_REMOVAL_THRESHOLD = -20;
 export const ENV_GLOBAL_SCALE = 160;  // Pixels per meter at perspective scale 1.0
-export const FADE_IN_DISTANCE = 50;   // Distance over which objects "grow" in
+export const FADE_IN_DISTANCE = 200;   // Distance over which objects "grow" in
 
 // Traffic
-export const TRAFFIC_RENDER_LIMIT = 500;
+export const TRAFFIC_RENDER_LIMIT = 800;
 export const TRAFFIC_REMOVAL_THRESHOLD = -10;
 
 // Heading and UI

@@ -62,6 +62,7 @@ export class TrafficSystem {
 
   renderVehicle(ctx, v, w, h) {
     const visibility = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
+    const scaleFactor = 0.1 + (visibility * 0.9);
     
     ctx.save();
     
@@ -71,7 +72,7 @@ export class TrafficSystem {
       const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
       
       const objHeight = 1.4 * v.height;
-      const pixelHeight = objHeight * v.height * pos.scale * CONST.ENV_GLOBAL_SCALE;
+      const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE * scaleFactor;
       const risingOffset = (1 - visibility) * pixelHeight;
 
       // Clip before translating so the mask stays fixed relative to the road ground
@@ -83,9 +84,9 @@ export class TrafficSystem {
     }
 
     if (v.distance < 250) {
-      this.renderVehicle3D(ctx, w, h, v, 1.0);
+      this.renderVehicle3D(ctx, w, h, v, scaleFactor);
     } else {
-      this.renderVehicleLOD(ctx, w, h, v, 1.0);
+      this.renderVehicleLOD(ctx, w, h, v, scaleFactor);
     }
     
     ctx.restore();

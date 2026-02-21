@@ -90,10 +90,14 @@ export class EnvironmentSystem {
 
     ctx.save();
     
+    // Dynamic scaling: start at 10% and scale up to 100% as visibility increases
+    const scaleFactor = 0.1 + (visibility * 0.9);
+    const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE * scaleFactor;
+
     // "Rising over horizon" effect: objects slide up from behind the ground plane
     if (visibility < 1.0) {
       const objHeight = f.height || 5;
-      const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE;
+      const pixelHeight = objHeight * renderScale;
       const risingOffset = (1 - visibility) * pixelHeight;
       
       // Clip at the base (horizon-aligned ground plane at this distance)
@@ -106,10 +110,8 @@ export class EnvironmentSystem {
       ctx.translate(0, risingOffset);
     }
 
-    const renderScale = pos.scale * CONST.ENV_GLOBAL_SCALE;
-
     if (f.type.startsWith('building_') || f.buildingType) {
-      renderBuilding(ctx, w, h, f, this.road, 1.0);
+      renderBuilding(ctx, w, h, f, this.road, scaleFactor);
     } else if (f.type === 'tree') {
       renderTree(ctx, pos.x, pos.y, renderScale, f);
     } else if (f.type === 'lightpole') {
