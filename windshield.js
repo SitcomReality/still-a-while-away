@@ -32,22 +32,22 @@ export class WindshieldFX {
     const spawnRate = this.weather.rain * 15;
     
     if (Math.random() < spawnRate * dt) {
-      // Main windshield
+      // Main windshield (spawn near bottom to move up)
       this.drops.main.push({
         x: Math.random(),
-        y: Math.random() * 0.3,
+        y: 0.7 + Math.random() * 0.3,
         progress: 0,
         speed: 0.3 + Math.random() * 0.3,
         length: 0.05 + Math.random() * 0.1
       });
     }
     
-    // Side windows (different direction)
+    // Side windows (spawn more centrally to move out and up)
     if (Math.random() < spawnRate * dt * 0.5) {
       const side = Math.random() > 0.5 ? 'left' : 'right';
       this.drops[side].push({
-        x: Math.random() * 0.3,
-        y: Math.random(),
+        x: 0.1 + Math.random() * 0.2,
+        y: 0.6 + Math.random() * 0.4,
         progress: 0,
         speed: 0.4 + Math.random() * 0.3,
         length: 0.03 + Math.random() * 0.06,
@@ -75,11 +75,10 @@ export class WindshieldFX {
     ctx.strokeStyle = 'rgba(150, 170, 190, 0.6)';
     ctx.lineWidth = 2;
     
-    // Main windshield drops (vertical) - reversed streak direction
+    // Main windshield drops (vertical - moving UP)
     this.drops.main.forEach(drop => {
       const x = drop.x * w;
       const startY = drop.y * h;
-      // Move opposite direction: streak upward from spawn point
       const endY = startY - drop.progress * h * 0.7;
       
       ctx.globalAlpha = 0.6 * (1 - drop.progress);
@@ -89,13 +88,12 @@ export class WindshieldFX {
       ctx.stroke();
     });
     
-    // Left window drops (diagonal) - reversed direction
+    // Left window drops (diagonal - moving UP and LEFT away from center)
     this.drops.left.forEach(drop => {
-      const startX = drop.x * w * 0.2;
+      const startX = drop.x * w;
       const startY = drop.y * h;
-      // Previously moved down-right; now move up-left
-      const endX = startX - drop.progress * w * 0.15;
-      const endY = startY - drop.progress * h * 0.3;
+      const endX = startX - drop.progress * w * 0.2;
+      const endY = startY - drop.progress * h * 0.4;
       
       ctx.globalAlpha = 0.5 * (1 - drop.progress);
       ctx.beginPath();
@@ -104,13 +102,12 @@ export class WindshieldFX {
       ctx.stroke();
     });
     
-    // Right window drops (diagonal, opposite direction) - reversed direction
+    // Right window drops (diagonal - moving UP and RIGHT away from center)
     this.drops.right.forEach(drop => {
-      const startX = w - drop.x * w * 0.2;
+      const startX = w - (drop.x * w);
       const startY = drop.y * h;
-      // Previously moved down-left; now move up-right
-      const endX = startX + drop.progress * w * 0.15;
-      const endY = startY - drop.progress * h * 0.3;
+      const endX = startX + drop.progress * w * 0.2;
+      const endY = startY - drop.progress * h * 0.4;
       
       ctx.globalAlpha = 0.5 * (1 - drop.progress);
       ctx.beginPath();
