@@ -75,11 +75,12 @@ export class WindshieldFX {
     ctx.strokeStyle = 'rgba(150, 170, 190, 0.6)';
     ctx.lineWidth = 2;
     
-    // Main windshield drops (vertical)
+    // Main windshield drops (vertical) - reversed streak direction
     this.drops.main.forEach(drop => {
       const x = drop.x * w;
       const startY = drop.y * h;
-      const endY = startY + drop.progress * h * 0.7;
+      // Move opposite direction: streak upward from spawn point
+      const endY = startY - drop.progress * h * 0.7;
       
       ctx.globalAlpha = 0.6 * (1 - drop.progress);
       ctx.beginPath();
@@ -88,12 +89,13 @@ export class WindshieldFX {
       ctx.stroke();
     });
     
-    // Left window drops (diagonal)
+    // Left window drops (diagonal) - reversed direction
     this.drops.left.forEach(drop => {
       const startX = drop.x * w * 0.2;
       const startY = drop.y * h;
-      const endX = startX + drop.progress * w * 0.15;
-      const endY = startY + drop.progress * h * 0.3;
+      // Previously moved down-right; now move up-left
+      const endX = startX - drop.progress * w * 0.15;
+      const endY = startY - drop.progress * h * 0.3;
       
       ctx.globalAlpha = 0.5 * (1 - drop.progress);
       ctx.beginPath();
@@ -102,12 +104,13 @@ export class WindshieldFX {
       ctx.stroke();
     });
     
-    // Right window drops (diagonal, opposite direction)
+    // Right window drops (diagonal, opposite direction) - reversed direction
     this.drops.right.forEach(drop => {
       const startX = w - drop.x * w * 0.2;
       const startY = drop.y * h;
-      const endX = startX - drop.progress * w * 0.15;
-      const endY = startY + drop.progress * h * 0.3;
+      // Previously moved down-left; now move up-right
+      const endX = startX + drop.progress * w * 0.15;
+      const endY = startY - drop.progress * h * 0.3;
       
       ctx.globalAlpha = 0.5 * (1 - drop.progress);
       ctx.beginPath();
