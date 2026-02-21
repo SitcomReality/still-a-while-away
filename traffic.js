@@ -109,7 +109,8 @@ export class TrafficSystem {
 
     const quad = [nbl, nbr, ntr, ntl];
     const dimFactor = 1.0;
-    const fogFactor = Math.min(1, (v.distance / CONST.TRAFFIC_RENDER_LIMIT) / (1.1 - fog.intensity));
+    // Make traffic fade into fog a bit earlier/stronger so vehicles match scenery fogging
+    const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity))));
     this.renderVehicleSilhouette(ctx, quad, v, fog, fogFactor);
     this.renderLights(ctx, quad, v, dimFactor, fadeScale, fog, fogFactor);
   }
@@ -139,7 +140,8 @@ export class TrafficSystem {
     const ftr = this.road.projectPoint(rOff, carHeight, zFar, w, h, curveRef);
 
     const nearQuad = [nbl, nbr, ntr, ntl];
-    const fogFactor = Math.min(1, (v.distance / CONST.TRAFFIC_RENDER_LIMIT) / (1.1 - fog.intensity));
+    // Make traffic fade into fog a bit earlier/stronger so vehicles match scenery fogging
+    const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity))));
     
     // Draw Surfaces
     ctx.fillStyle = lerpColor(adjustBrightness(v.color, -40), fog.color, fogFactor);

@@ -110,8 +110,8 @@ export class EnvironmentSystem {
       ctx.translate(0, risingOffset);
     }
 
-    // Calculate fog color blend factor for this distance
-    const fogFactor = Math.min(1, (relDist / CONST.VIEW_DISTANCE) / (1.1 - fog.intensity));
+    // Bias scenery so it is affected by fog slightly sooner/more than the ground gradient
+    const fogFactor = Math.min(1, Math.max(0, ((relDist / CONST.VIEW_DISTANCE) * 1.25) / (1.05 - fog.intensity)));
 
     if (f.type.startsWith('building_') || f.buildingType) {
       renderBuilding(ctx, w, h, f, this.road, scaleFactor, fog, fogFactor);
