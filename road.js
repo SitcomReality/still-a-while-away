@@ -110,72 +110,62 @@ export class RoadSystem {
     };
   }
 
-  render(ctx, w, h, fogIntensity = 0) {
-    const { roadWidth } = this;
+  render(ctx, w, h, biome) {
     const segments = CONST.ROAD_SEGMENTS;
     const viewDistance = CONST.VIEW_DISTANCE;
-    
     const horizon = this.getHorizon(h);
+    const { fog, fogColor } = biome.weather;
     
     const points = [];
-    
     for (let i = 0; i <= segments; i++) {
-        const progress = i / segments;
-        const dist = progress * viewDistance;
-        const pos = this.getRoadPosAt(dist, w, h);
-        
-        // Use projectPoint to find road edges for consistency with environment
-        const leftEdge = this.projectPoint(-CONST.ROAD_WIDTH / 2, 0, dist, w, h);
-        const rightEdge = this.projectPoint(CONST.ROAD_WIDTH / 2, 0, dist, w, h);
-        
-        // At horizon, enforce the minimum ROAD_TOP_WIDTH
-        const horizonWidth = w * CONST.ROAD_TOP_WIDTH;
-        const calculatedWidth = rightEdge.x - leftEdge.x;
-        const finalWidth = Math.max(calculatedWidth, horizonWidth * (1 - pos.scale));
-        
-        points.push({
-            x: pos.x,
-            y: pos.y,
-            w: finalWidth
-        });
+      const progress = i / segments;
+      const dist = progress * viewDistance;
+      const pos = this.getRoadPosAt(dist, w, h);
+      const leftEdge = this.projectPoint(-CONST.ROAD_WIDTH / 2, 0, dist, w, h);
+      const rightEdge = this.projectPoint(CONST.ROAD_WIDTH / 2, 0, dist, w, h);
+      const horizonWidth = w * CONST.ROAD_TOP_WIDTH;
+      const calculatedWidth = rightEdge.x - leftEdge.x;
+      const finalWidth = Math.max(calculatedWidth, horizonWidth * (1 - pos.scale));
+      
+      points.push({
+        x: pos.x,
+        y: pos.y,
+        w: finalWidth,
+        dist
+      });
     }
 
-    // Draw Road Surface
-    const roadGradient = ctx.createLinearGradient(0, horizon, 0, h);
-    
-    // Apply fog to the road at the horizon
-    const fogColor = CONST.FOG_COLOR;
-    const fogMix = Math.min(1, fogIntensity * 2);
-    
-    // Calculate color at horizon (fully fogged if high intensity)
-    const horizonColor = fogMix > 0.5 ? fogColor : '#1a1a1a';
-    
-    roadGradient.addColorStop(0, horizonColor);
-    roadGradient.addColorStop(0.2, fogMix > 0.2 ? fogColor : '#1e1e1e');
-    roadGradient.addColorStop(0.6, '#242424');
-    roadGradient.addColorStop(1, '#2a2a2a');
-    
-    ctx.fillStyle = roadGradient;
-    ctx.beginPath();
-    
-    // Right Edge (Near to Far)
-    ctx.moveTo(points[0].x + points[0].w/2, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x + points[i].w/2, points[i].y);
+    // Draw Road Surface Segment by Segment for Fog
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i+1];
+      
+      // Calculate depth-based color for the segment
+      const midDist = (p1.dist + p2.dist) / 2;
+      const progress = midDist / viewDistance;
+      
+      // Base road color with gradient look
+      const baseGray = Math.floor(lerp(42, 26, progress));
+      const roadHex = `#${baseGray.toString(16).repeat(3)}`;
+      
+      // Apply fog
+      const fogMix = (midDist / 800) * (fog / 0.5);
+      ctx.fillStyle = fogMix > 0 ? lerpColor(roadHex, fogColor, Math.min(1, fogMix)) : roadHex;
+      
+      ctx.beginPath();
+      ctx.moveTo(p1.x - p1.w/2, p1.y);
+      ctx.lineTo(p1.x + p1.w/2, p1.y);
+      ctx.lineTo(p2.x + p2.w/2, p2.y);
+      ctx.lineTo(p2.x - p2.w/2, p2.y);
+      ctx.closePath();
+      ctx.fill();
     }
-    
-    // Left Edge (Far to Near)
-    for (let i = points.length - 1; i >= 0; i--) {
-        ctx.lineTo(points[i].x - points[i].w/2, points[i].y);
-    }
-    
-    ctx.closePath();
-    ctx.fill();
 
-    this.renderMarkings(ctx, w, h);
+    this.renderMarkings(ctx, w, h, biome);
   }
   
-  renderMarkings(ctx, w, h) {
+  renderMarkings(ctx, w, h, biome) {
+    const { fog, fogColor } = biome.weather;
     const dashLength = CONST.MARKING_DASH_LENGTH;
     const markingWidth = 0.15; // 15cm wide lines
     
@@ -210,7 +200,9 @@ export class RoadSystem {
       ctx.fill();
 
       // Dash Core
-      ctx.fillStyle = '#f5f5dc';
+      const coreColor = '#f5f5dc';
+      const fogMix = (m.distance / 800) * (fog / 0.5);
+      ctx.fillStyle = fogMix > 0 ? lerpColor(coreColor, fogColor, Math.min(1, fogMix)) : coreColor;
       ctx.globalAlpha = 0.8 * Math.min(1, p1.scale + 0.3);
       ctx.beginPath();
       ctx.moveTo(x1, p1.y);

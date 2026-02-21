@@ -76,7 +76,7 @@ export class EnvironmentSystem {
     );
   }
   
-  renderFeature(ctx, f, w, h) {
+  renderFeature(ctx, f, w, h, state) {
     const relDist = f.distance - this.road.distance;
     if (relDist > CONST.ENV_VIEW_DISTANCE) return;
 
@@ -119,6 +119,32 @@ export class EnvironmentSystem {
       renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade);
     } else if (f.type === 'bush') {
       renderBush(ctx, pos.x, pos.y, renderScale, f);
+    }
+
+    // Apply distance-based fog over the rendered feature
+    const fogDensity = state.biome.weather.fog;
+    const fogColor = state.biome.weather.fogColor;
+    const fogMix = (relDist / 800) * (fogDensity / 0.5);
+    if (fogMix > 0.01) {
+      ctx.globalAlpha = Math.min(1, fogMix);
+      ctx.fillStyle = fogColor;
+      
+      // Redraw the feature silhouette/area with the fog color.
+      // For buildings, this is complex, so we approximate with a quad if possible or rely on the globalAlpha mask.
+      // Since we want to obscure the texture, we use destination-atop or just draw a bounding box if lazy, 
+      // but the best way is to have used a 'fog factor' in the base renderers or just draw a tinted box.
+      // Actually, for better performance, we'll draw a rectangle over the projected area.
+      // This is a common 2D canvas fog trick.
+      
+      // Re-projection for a simpler fog mask:
+      const objH = f.height || 10;
+      const objW = f.width || 10;
+      const topPos = this.road.projectPoint(lateral, objH, relDist, w, h);
+      const bottomPos = pos; // from earlier
+      const pixelH = (bottomPos.y - topPos.y);
+      const pixelW = objW * renderScale;
+
+      ctx.fillRect(bottomPos.x - pixelW/2, topPos.y, pixelW, pixelH);
     }
     
     ctx.restore();

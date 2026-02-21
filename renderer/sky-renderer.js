@@ -23,22 +23,19 @@ export class SkyRenderer {
     }
 
     colors.forEach((color, i) => {
-      gradient.addColorStop(i / (colors.length - 1), color);
+      // Lerp sky colors toward fog color near the horizon if fog is present
+      let finalColor = color;
+      if (biome.weather.fog > 0) {
+        // Higher stops (closer to top of screen) are less fogged
+        const stopFactor = i / (colors.length - 1); // 0 at top, 1 at horizon
+        const fogMix = stopFactor * Math.min(1, biome.weather.fog / 0.5);
+        finalColor = lerpColor(color, biome.weather.fogColor, fogMix);
+      }
+      gradient.addColorStop(i / (colors.length - 1), finalColor);
     });
     
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, horizonY);
-
-    // Fog overlay at horizon
-    const fogIntensity = biome.weather.fog;
-    if (fogIntensity > 0.05) {
-      const fogAlpha = Math.min(1, fogIntensity * 2); // 0.5 becomes 1.0 (opaque)
-      const fogGrad = ctx.createLinearGradient(0, horizonY - 100, 0, horizonY);
-      fogGrad.addColorStop(0, 'rgba(148, 163, 184, 0)');
-      fogGrad.addColorStop(1, `rgba(148, 163, 184, ${fogAlpha})`);
-      ctx.fillStyle = fogGrad;
-      ctx.fillRect(0, horizonY - 100, w, 100);
-    }
     
     // Stars
     if (biome.stars > 0.01) {

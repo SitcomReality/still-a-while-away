@@ -112,6 +112,7 @@ export class BiomeManager {
         rain: this.weather.rain,
         fog: this.weather.fog,
         clouds: this.weather.clouds,
+        fogColor: '#c8d2e1', // Base fog color (cool gray-blue)
         type: this.weather.rain > 0.2 ? 'rain' : (this.weather.fog > 0.2 ? 'fog' : 'clear')
       },
       trafficDensity: trafficByType[biome.id] || 0.5,

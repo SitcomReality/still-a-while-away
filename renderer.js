@@ -25,12 +25,19 @@ export class Renderer {
     this.hillRenderer.render(ctxs.sky, w, h, horizonY, state.road.heading, state.biome);
     
     // Ground Plane (Behind everything)
-    ctxs.sky.fillStyle = state.biome.groundColor;
+    // The ground plane needs distance-based fog too. 
+    // We render it as a gradient from horizon (full fog) to foreground.
+    const groundGrad = ctxs.sky.createLinearGradient(0, horizonY, 0, h);
+    const fogAtHorizon = Math.min(1, state.biome.weather.fog / 0.5);
+    groundGrad.addColorStop(0, lerpColor(state.biome.groundColor, state.biome.weather.fogColor, fogAtHorizon));
+    groundGrad.addColorStop(1, state.biome.groundColor);
+    
+    ctxs.sky.fillStyle = groundGrad;
     ctxs.sky.fillRect(0, horizonY, w, h - horizonY);
     
     // 2. Road layer
     ctxs.road.clearRect(0, 0, w, h);
-    state.road.render(ctxs.road, w, h, state.weather.fog);
+    state.road.render(ctxs.road, w, h, state.biome);
 
     // 3. Depth-sorted world objects (Environment + Traffic)
     ctxs.env.clearRect(0, 0, w, h);
@@ -65,22 +72,16 @@ export class Renderer {
     renderables.sort((a, b) => b.z - a.z);
     
     renderables.forEach(item => {
-      const fogAlpha = state.weather.getFogAlpha(item.z);
-      ctxs.traffic.globalAlpha = 1 - fogAlpha;
-      
       if (item.type === 'env') {
-        state.environment.renderFeature(ctxs.traffic, item.data, w, h);
+        state.environment.renderFeature(ctxs.traffic, item.data, w, h, state);
       } else {
-        state.traffic.renderVehicle(ctxs.traffic, item.data, w, h);
+        state.traffic.renderVehicle(ctxs.traffic, item.data, w, h, state);
       }
     });
-    ctxs.traffic.globalAlpha = 1;
     
-    // 4. Weather & Fog layer
+    // 4. Weather layer
     ctxs.weather.clearRect(0, 0, w, h);
-    ctxs.fog.clearRect(0, 0, w, h);
     state.weather.render(ctxs.weather, w, h);
-    state.weather.renderFog(ctxs.fog, w, h);
     
     // 5. Windshield layer
     ctxs.windshield.clearRect(0, 0, w, h);

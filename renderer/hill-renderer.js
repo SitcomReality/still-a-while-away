@@ -16,7 +16,9 @@ export class HillRenderer {
   }
 
   render(ctx, w, h, horizonY, heading, biome) {
-    ctx.fillStyle = biome.groundColor;
+    // Hills are effectively at infinite distance, so they take full horizon fog
+    const fogMix = Math.min(1, biome.weather.fog / 0.5);
+    ctx.fillStyle = lerpColor(biome.groundColor, biome.weather.fogColor, fogMix);
     ctx.beginPath();
     ctx.moveTo(0, h);
 

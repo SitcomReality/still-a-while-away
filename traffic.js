@@ -61,23 +61,19 @@ export class TrafficSystem {
   
 
 
-  renderVehicle(ctx, v, w, h) {
+  renderVehicle(ctx, v, w, h, state) {
     const visibility = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
-    // For vehicles, we allow the scale to go all the way to 0 at the horizon for a "tiny point" effect
     const scaleFactor = visibility;
+    const laneOffset = v.lane === 'right' ? CONST.ROAD_WIDTH * 0.25 : -CONST.ROAD_WIDTH * 0.25;
     
     ctx.save();
     
     if (visibility < 1.0) {
-      const roadW = CONST.ROAD_WIDTH;
-      const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
       const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
-      
       const objHeight = 1.4 * v.height;
       const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE * scaleFactor;
       const risingOffset = (1 - visibility) * pixelHeight;
 
-      // Clip before translating so the mask stays fixed relative to the road ground
       ctx.beginPath();
       ctx.rect(0, 0, w, pos.y);
       ctx.clip();
@@ -89,6 +85,23 @@ export class TrafficSystem {
       this.renderVehicle3D(ctx, w, h, v, scaleFactor);
     } else {
       this.renderVehicleLOD(ctx, w, h, v, scaleFactor);
+    }
+
+    // Apply depth-based fog over vehicle
+    const fogDensity = state.biome.weather.fog;
+    const fogColor = state.biome.weather.fogColor;
+    const fogMix = (v.distance / 800) * (fogDensity / 0.5);
+    if (fogMix > 0.01) {
+      const laneOffset = v.lane === 'right' ? CONST.ROAD_WIDTH * 0.25 : -CONST.ROAD_WIDTH * 0.25;
+      const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
+      const objH = 1.4 * v.height;
+      const topPos = this.road.projectPoint(laneOffset, objH, v.distance, w, h);
+      const pixelH = (pos.y - topPos.y);
+      const pixelW = 1.8 * scaleFactor * pos.scale * CONST.ENV_GLOBAL_SCALE;
+      
+      ctx.globalAlpha = Math.min(1, fogMix);
+      ctx.fillStyle = fogColor;
+      ctx.fillRect(pos.x - pixelW/2, topPos.y, pixelW, pixelH);
     }
     
     ctx.restore();
