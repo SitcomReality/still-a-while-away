@@ -22,23 +22,19 @@ export class WindshieldFX {
   }
   
   addStreaks(dt) {
-    // Increased spawn rate for a more immersive feel
-    const spawnRate = this.weather.rain * 25;
+    // Spawn rate scaled by rain intensity
+    const spawnRate = this.weather.rain * 22;
     
     if (Math.random() < spawnRate * dt) {
-      // Spawn point anywhere on the windshield surface
       const x = Math.random();
-      const y = Math.random() * 0.9; // Bias away from the very top edge where cabin overlay starts
+      const y = Math.random() * 0.9;
 
-      // Origin for the "halo" effect is bottom-center with slight random offset for asymmetry
       const originX = 0.5 + (Math.random() - 0.5) * 0.3;
       const originY = 1.0 + (Math.random() - 0.5) * 0.2;
 
-      // Calculate direction vector from origin to spawn point
       let dx = x - originX;
       let dy = y - originY;
       
-      // Add a random angle perturbation to the direction
       const angleOffset = (Math.random() - 0.5) * 0.25;
       const cos = Math.cos(angleOffset);
       const sin = Math.sin(angleOffset);
@@ -49,56 +45,70 @@ export class WindshieldFX {
 
       const dist = Math.sqrt(dx * dx + dy * dy);
       
-      // Guard against spawning exactly at the origin
       if (dist > 0.01) {
         this.streaks.push({
           x, y,
           dirX: dx / dist,
           dirY: dy / dist,
           progress: 0,
-          speed: 0.3 + Math.random() * 0.5,
-          length: 0.04 + Math.random() * 0.08,
-          opacity: 0.3 + Math.random() * 0.5
+          speed: 0.25 + Math.random() * 0.45,
+          length: 0.03 + Math.random() * 0.06,
+          width: 0.8 + Math.random() * 1.5,
+          opacity: 0.2 + Math.random() * 0.4,
+          seed: Math.random() * 100, // Random seed for jitter path
+          jitterScale: 0.005 + Math.random() * 0.015 // How much it wiggles
         });
       }
     }
   }
   
   render(ctx, w, h) {
-    // 1. Background haze
     if (this.condensation > 0.01) {
       ctx.fillStyle = `rgba(180, 180, 190, ${this.condensation * 0.15})`;
       for (let i = 0; i < 100; i++) {
         const rx = (Math.sin(i * 12.9898) * 43758.5453) % 1;
         const ry = (Math.sin(i * 78.233) * 43758.5453) % 1;
-        ctx.globalAlpha = this.condensation * 0.1;
-        ctx.fillRect(Math.abs(rx) * w, Math.abs(ry) * h * 0.7, 3, 3);
+        ctx.globalAlpha = this.condensation * 0.08;
+        ctx.fillRect(Math.abs(rx) * w, Math.abs(ry) * h * 0.7, 2, 2);
       }
       ctx.globalAlpha = 1;
     }
     
-    // 2. Halo-style streaks
-    ctx.strokeStyle = 'rgba(150, 170, 190, 0.6)';
-    ctx.lineWidth = 1.5;
-    
     this.streaks.forEach(s => {
-      // Use quadratic easing for acceleration: starts slow, ends fast
       const easedProgress = s.progress * s.progress;
-      const travelScale = 0.6; // How far they travel total
-
-      // Current tail of the streak
-      const tailX = (s.x + s.dirX * easedProgress * travelScale) * w;
-      const tailY = (s.y + s.dirY * easedProgress * travelScale) * h;
+      const travelScale = 0.65;
+      const alpha = s.opacity * (1 - s.progress);
       
-      // Current head of the streak (slightly longer due to acceleration)
-      const headX = (s.x + s.dirX * (easedProgress * travelScale + s.length)) * w;
-      const headY = (s.y + s.dirY * (easedProgress * travelScale + s.length)) * h;
+      // Calculate perpendicular vector for jitter
+      const perpX = -s.dirY;
+      const perpY = s.dirX;
       
-      ctx.globalAlpha = s.opacity * (1 - s.progress); // Fade out linearly over time
+      // Tail position with subtle jitter
+      const tailJitter = Math.sin(s.progress * 15 + s.seed) * s.jitterScale;
+      const tailX = (s.x + s.dirX * easedProgress * travelScale + perpX * tailJitter) * w;
+      const tailY = (s.y + s.dirY * easedProgress * travelScale + perpY * tailJitter) * h;
+      
+      // Head position with slightly different jitter phase and stretched length
+      const headProgress = easedProgress * travelScale + s.length * (1 + s.progress * 0.5);
+      const headJitter = Math.sin((s.progress + 0.1) * 15 + s.seed) * s.jitterScale;
+      const headX = (s.x + s.dirX * headProgress + perpX * headJitter) * w;
+      const headY = (s.y + s.dirY * headProgress + perpY * headJitter) * h;
+      
+      ctx.globalAlpha = alpha;
+      
+      // Streak Line
+      ctx.strokeStyle = 'rgba(180, 195, 210, 0.6)';
+      ctx.lineWidth = s.width;
       ctx.beginPath();
       ctx.moveTo(tailX, tailY);
       ctx.lineTo(headX, headY);
       ctx.stroke();
+
+      // Leading Droplet Head
+      ctx.fillStyle = 'rgba(210, 225, 240, 0.8)';
+      ctx.beginPath();
+      ctx.arc(headX, headY, s.width * 1.2, 0, Math.PI * 2);
+      ctx.fill();
     });
     
     ctx.globalAlpha = 1;
