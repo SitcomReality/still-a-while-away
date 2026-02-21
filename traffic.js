@@ -141,7 +141,7 @@ export class TrafficSystem {
 
     const nearQuad = [nbl, nbr, ntr, ntl];
     // Make traffic fade into fog a bit earlier/stronger so vehicles match scenery fogging
-    const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity))));
+    const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity)));
     
     // Draw Surfaces
     ctx.fillStyle = lerpColor(adjustBrightness(v.color, -40), fog.color, fogFactor);
