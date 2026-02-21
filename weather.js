@@ -1,3 +1,5 @@
+import * as CONST from './constants.js';
+
 export class WeatherSystem {
   constructor() {
     this.rain = 0;
