@@ -1,4 +1,4 @@
-import { noise } from '../utils.js';
+import { noise, lerpColor } from '../utils.js';
 
 export class HillRenderer {
   constructor() {
