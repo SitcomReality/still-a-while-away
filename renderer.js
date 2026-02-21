@@ -33,11 +33,22 @@ export class Renderer {
     
     // Ground Plane (Behind everything)
     const groundGradient = ctxs.sky.createLinearGradient(0, horizonY, 0, h);
-    const farFogFactor = Math.min(1, 1 / (1.1 - fog.intensity));
-    const midFogFactor = Math.min(1, 0.5 / (1.1 - fog.intensity));
     
-    groundGradient.addColorStop(0, lerpColor(state.biome.groundColor, fog.color, farFogFactor));
-    groundGradient.addColorStop(0.5, lerpColor(state.biome.groundColor, fog.color, midFogFactor));
+    // Match scenery fog logic by mapping world distance to gradient stops.
+    // stop = PERSPECTIVE_K / (dist + PERSPECTIVE_K).
+    const intensity = fog.intensity;
+    const fogAtDist = (d) => Math.min(1, Math.max(0, ((d / CONST.VIEW_DISTANCE) * 1.25) / (1.05 - intensity)));
+
+    // Distant horizon is pure fog
+    groundGradient.addColorStop(0, fog.color);
+    
+    // Transition stops at world-space distances to mimic perspective depth
+    // Stop 0.05 is ~150m away
+    groundGradient.addColorStop(0.05, lerpColor(state.biome.groundColor, fog.color, fogAtDist(150)));
+    // Stop 0.17 is ~40m away
+    groundGradient.addColorStop(0.17, lerpColor(state.biome.groundColor, fog.color, fogAtDist(40)));
+    
+    // Near foreground (screen bottom) has no fog
     groundGradient.addColorStop(1, state.biome.groundColor);
     
     ctxs.sky.fillStyle = groundGradient;

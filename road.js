@@ -144,16 +144,19 @@ export class RoadSystem {
     // Draw Road Surface with distance-based fog
     const roadGradient = ctx.createLinearGradient(0, horizon, 0, h);
     
-    // Distant part (near horizon)
-    const farFogFactor = Math.min(1, (viewDistance / viewDistance) / (1.1 - fog.intensity));
-    roadGradient.addColorStop(0, lerpColor('#1a1a1a', fog.color, farFogFactor));
+    // Match scenery fog logic by mapping world distance to gradient stops.
+    const fogAtDist = (d) => Math.min(1, Math.max(0, ((d / viewDistance) * 1.25) / (1.05 - fog.intensity)));
+
+    // Horizon is pure fog
+    roadGradient.addColorStop(0, fog.color);
     
-    // Middle part
-    const midDist = viewDistance * 0.5;
-    const midFogFactor = Math.min(1, (midDist / viewDistance) / (1.1 - fog.intensity));
-    roadGradient.addColorStop(0.5, lerpColor('#242424', fog.color, midFogFactor));
+    // 150m stop (Vertical stop ~0.05)
+    roadGradient.addColorStop(0.05, lerpColor('#1a1a1a', fog.color, fogAtDist(150)));
     
-    // Near part
+    // 40m stop (Vertical stop ~0.17)
+    roadGradient.addColorStop(0.17, lerpColor('#242424', fog.color, fogAtDist(40)));
+    
+    // Near part (screen bottom)
     roadGradient.addColorStop(1, '#2a2a2a');
     
     ctx.fillStyle = roadGradient;
