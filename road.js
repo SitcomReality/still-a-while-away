@@ -1,4 +1,4 @@
-import { noise } from './utils.js';
+import { noise, lerp, lerpColor } from './utils.js';
 import * as CONST from './constants.js';
 
 export class RoadSystem {
