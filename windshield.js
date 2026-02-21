@@ -22,8 +22,8 @@ export class WindshieldFX {
   }
   
   addStreaks(dt) {
-    // Spawn rate scaled by rain intensity
-    const spawnRate = this.weather.rain * 22;
+    // Spawn rate scaled by rain intensity (reduced frequency)
+    const spawnRate = this.weather.rain * 11; // was *22, now half as frequent
     
     if (Math.random() < spawnRate * dt) {
       const x = Math.random();
@@ -56,10 +56,13 @@ export class WindshieldFX {
           dirX: dx / dist,
           dirY: dy / dist,
           progress: 0,
-          speed: 0.25 + Math.random() * 0.45,
+          // Reduce minimum speed to 25% of previous min (0.25 * 0.25 = 0.0625).
+          // Keep same upper range so some streaks can still be faster.
+          speed: 0.0625 + Math.random() * 0.45,
           length: baseLength,    // starting length
           maxLength: maxLength,  // maximum length it will reach as it ages
-          width: 0.8 + Math.random() * 1.0, // slight reduction of max width variance
+          // Increase maximum visual size for heads/tails (width) while keeping variability
+          width: 1.6 + Math.random() * 1.6, // larger max width than before (was 0.8 + rand*1.0)
           opacity: 0.2 + Math.random() * 0.4,
           seed: Math.random() * 100, // Random seed for jitter path
           jitterScale: 0.004 + Math.random() * 0.012 // slightly lower jitter
