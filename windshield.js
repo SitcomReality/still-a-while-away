@@ -88,39 +88,34 @@ export class WindshieldFX {
       const travelScale = 0.65;
       const alpha = s.opacity * (1 - s.progress);
       
-      // Gradually interpolate length from start to max based on progress (0..1)
       const currentLength = s.length + (s.maxLength - s.length) * s.progress;
-      
-      // Calculate perpendicular vector for jitter
       const perpX = -s.dirY;
       const perpY = s.dirX;
       
-      // Tail position with subtle jitter — tails start very short because easedProgress*travelScale is small early
       const tailJitter = Math.sin(s.progress * 15 + s.seed) * s.jitterScale;
       const tailX = (s.x + s.dirX * easedProgress * travelScale + perpX * tailJitter) * w;
       const tailY = (s.y + s.dirY * easedProgress * travelScale + perpY * tailJitter) * h;
       
-      // Head position uses the currentLength so streaks lengthen as they age,
-      // but overall lengths are much shorter due to reduced base/max values.
       const headProgress = easedProgress * travelScale + currentLength * (1 + s.progress * 0.5);
       const headJitter = Math.sin((s.progress + 0.1) * 15 + s.seed) * s.jitterScale;
       const headX = (s.x + s.dirX * headProgress + perpX * headJitter) * w;
       const headY = (s.y + s.dirY * headProgress + perpY * headJitter) * h;
-      
-      ctx.globalAlpha = alpha;
-      
-      // Streak Line
-      ctx.strokeStyle = 'rgba(180, 195, 210, 0.6)';
-      ctx.lineWidth = s.width;
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(headX, headY);
-      ctx.stroke();
 
-      // Leading Droplet Head
-      ctx.fillStyle = 'rgba(210, 225, 240, 0.8)';
+      // Calculate the widest point of the diamond (the "hips")
+      // We place it closer to the head to maintain a "leading" weight
+      const sideX = (headX * 0.7 + tailX * 0.3);
+      const sideY = (headY * 0.7 + tailY * 0.3);
+      const sideDist = s.width * 1.5;
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgba(200, 215, 235, 0.7)';
+      
       ctx.beginPath();
-      ctx.arc(headX, headY, s.width * 1.2, 0, Math.PI * 2);
+      ctx.moveTo(headX, headY); // Head Tip
+      ctx.lineTo(sideX + perpX * sideDist, sideY + perpY * sideDist); // Side 1
+      ctx.lineTo(tailX, tailY); // Tail Tip
+      ctx.lineTo(sideX - perpX * sideDist, sideY - perpY * sideDist); // Side 2
+      ctx.closePath();
       ctx.fill();
     });
     
