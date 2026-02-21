@@ -32,6 +32,9 @@ class Game {
     // Set initial biome randomly
     this.biomes.currentBiomeIndex = Math.floor(Math.random() * this.biomes.biomeTypes.length);
     
+    // Start intro sequence
+    this.uiOverlay.startIntroSequence();
+
     // Start game loop
     requestAnimationFrame((t) => this.loop(t));
   }
