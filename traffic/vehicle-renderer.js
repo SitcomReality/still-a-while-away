@@ -35,11 +35,12 @@ export function renderVehicle(ctx, v, w, h, road, fog) {
 }
 
 function renderVehicleLOD(ctx, w, h, v, road, fadeScale = 1.0, fog) {
+  const isSingleBody = v.type === 'bus' || v.type === 'truck';
   const roadW = CONST.ROAD_WIDTH;
   const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
   
-  const baseH = v.height * 0.6 * fadeScale;
-  const cabinH = v.height * 0.4 * fadeScale;
+  const baseH = isSingleBody ? (v.height * fadeScale) : (v.height * 0.6 * fadeScale);
+  const cabinH = isSingleBody ? 0 : (v.height * 0.4 * fadeScale);
   const carWidth = v.width * fadeScale; 
   const cabinWidth = carWidth * 0.8;
 
@@ -49,26 +50,28 @@ function renderVehicleLOD(ctx, w, h, v, road, fadeScale = 1.0, fog) {
   const ntl = road.projectPoint(laneOffset - carWidth/2, baseH, v.distance, w, h);
   const ntr = road.projectPoint(laneOffset + carWidth/2, baseH, v.distance, w, h);
   
-  // Cabin Quad
-  const cnbl = road.projectPoint(laneOffset - cabinWidth/2, baseH, v.distance, w, h);
-  const cnbr = road.projectPoint(laneOffset + cabinWidth/2, baseH, v.distance, w, h);
-  const cntl = road.projectPoint(laneOffset - cabinWidth/2, baseH + cabinH, v.distance, w, h);
-  const cntr = road.projectPoint(laneOffset + cabinWidth/2, baseH + cabinH, v.distance, w, h);
-
-  if (nbl.scale <= 0) return;
-
-  const baseNearQuad = [nbl, nbr, ntr, ntl];
-  const cabinNearQuad = [cnbl, cnbr, cntr, cntl];
-  
   const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity)));
   
-  renderVehicleSilhouette(ctx, baseNearQuad, v, fog, fogFactor, false);
-  renderVehicleSilhouette(ctx, cabinNearQuad, v, fog, fogFactor, true, true);
+  if (nbl.scale <= 0) return;
+  const baseNearQuad = [nbl, nbr, ntr, ntl];
+  
+  renderVehicleSilhouette(ctx, baseNearQuad, v, fog, fogFactor, isSingleBody);
+
+  if (!isSingleBody) {
+    // Cabin Quad
+    const cnbl = road.projectPoint(laneOffset - cabinWidth/2, baseH, v.distance, w, h);
+    const cnbr = road.projectPoint(laneOffset + cabinWidth/2, baseH, v.distance, w, h);
+    const cntl = road.projectPoint(laneOffset - cabinWidth/2, baseH + cabinH, v.distance, w, h);
+    const cntr = road.projectPoint(laneOffset + cabinWidth/2, baseH + cabinH, v.distance, w, h);
+    const cabinNearQuad = [cnbl, cnbr, cntr, cntl];
+    renderVehicleSilhouette(ctx, cabinNearQuad, v, fog, fogFactor, true, true);
+  }
   
   renderLights(ctx, baseNearQuad, v, 1.0, fadeScale, fog, fogFactor);
 }
 
 function renderVehicle3D(ctx, w, h, v, road, fadeScale = 1.0, fog) {
+  const isSingleBody = v.type === 'bus' || v.type === 'truck';
   const zNear = Math.max(0.1, v.distance);
   const zFar = v.distance + v.depth;
   const curveRef = v.distance;
@@ -76,8 +79,8 @@ function renderVehicle3D(ctx, w, h, v, road, fadeScale = 1.0, fog) {
   const roadW = CONST.ROAD_WIDTH;
   const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
 
-  const baseH = v.height * 0.6 * fadeScale;
-  const cabinH = v.height * 0.4 * fadeScale;
+  const baseH = isSingleBody ? (v.height * fadeScale) : (v.height * 0.6 * fadeScale);
+  const cabinH = isSingleBody ? 0 : (v.height * 0.4 * fadeScale);
   const totalH = (v.height) * fadeScale;
   
   const baseW = v.width * fadeScale;
@@ -100,16 +103,6 @@ function renderVehicle3D(ctx, w, h, v, road, fadeScale = 1.0, fog) {
   const ftl = road.projectPoint(lOff, baseH, zFar, w, h, curveRef);
   const ftr = road.projectPoint(rOff, baseH, zFar, w, h, curveRef);
 
-  // Cabin Corners
-  const cnbl = road.projectPoint(clOff, baseH, cabinZNear, w, h, curveRef);
-  const cnbr = road.projectPoint(crOff, baseH, cabinZNear, w, h, curveRef);
-  const cntl = road.projectPoint(clOff, totalH, cabinZNear, w, h, curveRef);
-  const cntr = road.projectPoint(crOff, totalH, cabinZNear, w, h, curveRef);
-  const cfbl = road.projectPoint(clOff, baseH, cabinZFar, w, h, curveRef);
-  const cfbr = road.projectPoint(crOff, baseH, cabinZFar, w, h, curveRef);
-  const cftl = road.projectPoint(clOff, totalH, cabinZFar, w, h, curveRef);
-  const cftr = road.projectPoint(clOff, totalH, cabinZFar, w, h, curveRef);
-
   const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity)));
 
   // Render Base Box
@@ -121,20 +114,32 @@ function renderVehicle3D(ctx, w, h, v, road, fadeScale = 1.0, fog) {
   ctx.fillStyle = lerpColor(adjustBrightness(v.color, 10), fog.color, fogFactor);
   drawQuad(ctx, [ntl, ntr, ftr, ftl]);
 
-  // Render Cabin Box
-  ctx.fillStyle = lerpColor(adjustBrightness(v.color, -35), fog.color, fogFactor);
-  drawQuad(ctx, [cfbl, cfbr, cftr, cftl]);
-  ctx.fillStyle = lerpColor(adjustBrightness(v.color, -15), fog.color, fogFactor);
-  if (cnbl.x > cfbl.x) drawQuad(ctx, [cnbl, cfbl, cftl, cntl]);
-  if (cnbr.x < cfbr.x) drawQuad(ctx, [cnbr, cfbr, cftr, cntr]);
-  ctx.fillStyle = lerpColor(adjustBrightness(v.color, 25), fog.color, fogFactor);
-  drawQuad(ctx, [cntl, cntr, cftr, cftl]);
+  if (!isSingleBody) {
+    // Cabin Corners
+    const cnbl = road.projectPoint(clOff, baseH, cabinZNear, w, h, curveRef);
+    const cnbr = road.projectPoint(crOff, baseH, cabinZNear, w, h, curveRef);
+    const cntl = road.projectPoint(clOff, totalH, cabinZNear, w, h, curveRef);
+    const cntr = road.projectPoint(crOff, totalH, cabinZNear, w, h, curveRef);
+    const cfbl = road.projectPoint(clOff, baseH, cabinZFar, w, h, curveRef);
+    const cfbr = road.projectPoint(crOff, baseH, cabinZFar, w, h, curveRef);
+    const cftl = road.projectPoint(clOff, totalH, cabinZFar, w, h, curveRef);
+    const cftr = road.projectPoint(crOff, totalH, cabinZFar, w, h, curveRef);
+
+    // Render Cabin Box
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -35), fog.color, fogFactor);
+    drawQuad(ctx, [cfbl, cfbr, cftr, cftl]);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -15), fog.color, fogFactor);
+    if (cnbl.x > cfbl.x) drawQuad(ctx, [cnbl, cfbl, cftl, cntl]);
+    if (cnbr.x < cfbr.x) drawQuad(ctx, [cnbr, cfbr, cftr, cntr]);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, 25), fog.color, fogFactor);
+    drawQuad(ctx, [cntl, cntr, cftr, cftl]);
+
+    const cabinNearQuad = [cnbl, cnbr, cntr, cntl];
+    renderVehicleSilhouette(ctx, cabinNearQuad, v, fog, fogFactor, true, true);
+  }
 
   const baseNearQuad = [nbl, nbr, ntr, ntl];
-  const cabinNearQuad = [cnbl, cnbr, cntr, cntl];
-
-  renderVehicleSilhouette(ctx, baseNearQuad, v, fog, fogFactor, false);
-  renderVehicleSilhouette(ctx, cabinNearQuad, v, fog, fogFactor, true, true);
+  renderVehicleSilhouette(ctx, baseNearQuad, v, fog, fogFactor, isSingleBody);
 
   const futureCurve = road.getCurveAt(v.distance + 20);
   const currentCurve = road.getCurveAt(v.distance);
