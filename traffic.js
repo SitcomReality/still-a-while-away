@@ -198,11 +198,24 @@ export class TrafficSystem {
       ctx.globalAlpha = 1;
     }
     
-    const coreSize = Math.max(0.5, (isSameDirection ? 6 : 8) * scale * fadeScale);
+    // Draw two concentric core layers so the middle appears brighter and more opaque:
+    // - Outer core: softer, slightly transparent
+    // - Inner core: smaller radius, stronger alpha to read as a bright center
+    const coreBaseSize = Math.max(0.5, (isSameDirection ? 6 : 8) * scale * fadeScale);
+    const outerCoreRadius = coreBaseSize * 0.6;
+    const innerCoreRadius = coreBaseSize * 0.25;
+
     ctx.fillStyle = lightColor;
-    ctx.globalAlpha = brightness * 0.95;
-    ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(lightR.x, lightR.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
+    // Outer core (soft)
+    ctx.globalAlpha = Math.min(1, brightness * 0.7);
+    ctx.beginPath(); ctx.arc(lightL.x, lightL.y, outerCoreRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lightR.x, lightR.y, outerCoreRadius, 0, Math.PI * 2); ctx.fill();
+
+    // Inner core (bright center)
+    ctx.globalAlpha = Math.min(1, brightness * 1.35);
+    ctx.beginPath(); ctx.arc(lightL.x, lightL.y, innerCoreRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(lightR.x, lightR.y, innerCoreRadius, 0, Math.PI * 2); ctx.fill();
+
     ctx.globalAlpha = 1;
   }
   
