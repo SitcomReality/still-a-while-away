@@ -34,28 +34,69 @@ export class TrafficSystem {
   }
   
   spawnVehicle(biome) {
-    const types = ['sedan', 'suv', 'truck', 'sports'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    const weights = [
+      { type: 'sedan', weight: 40 },
+      { type: 'suv', weight: 25 },
+      { type: 'sports', weight: 15 },
+      { type: 'truck', weight: 10 },
+      { type: 'bus', weight: 10 }
+    ];
     
+    const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+    let random = Math.random() * totalWeight;
+    let selected = weights[0];
+    for (const w of weights) {
+      if (random < w.weight) {
+        selected = w;
+        break;
+      }
+      random -= w.weight;
+    }
+
+    const type = selected.type;
+    
+    // Base dimensions in meters
+    let width = 2.0;
+    let height = 1.2;
+    let depth = 4.5;
+
+    if (type === 'sedan') {
+      width = 2.1; height = 1.1; depth = 4.6;
+    } else if (type === 'suv') {
+      width = 2.2; height = 1.4; depth = 5.0;
+    } else if (type === 'sports') {
+      width = 2.2; height = 0.9; depth = 4.5;
+    } else if (type === 'truck') {
+      width = 2.5; height = 2.8; depth = 10.0;
+    } else if (type === 'bus') {
+      width = 2.8; height = 3.2; depth = 15.0;
+    }
+
     const vehicle = {
-      // Spawn vehicles at the edge of the render distance to allow for smooth fade-in
       distance: CONST.TRAFFIC_RENDER_LIMIT - 10,
       speed: 20 + Math.random() * 20,
       type,
-      // Oncoming traffic in right lane, occasional traffic in our lane
       lane: Math.random() > 0.3 ? 'right' : 'left',
       color: this.getRandomColor(),
       headlightColor: Math.random() > 0.7 ? '#a8d8ff' : '#fff8e1',
       headlightIntensity: 0.8 + Math.random() * 0.4,
-      height: type === 'truck' ? 1.2 : type === 'sports' ? 0.8 : 1.0,
-      depth: type === 'truck' ? 8 : 4.5
+      width,
+      height,
+      depth
     };
     
     this.vehicles.push(vehicle);
   }
   
   getRandomColor() {
-    const colors = ['#1a1a1a', '#2a2a2a', '#3a3a3a', '#4a4a4a'];
+    const colors = [
+      '#1a1a1a', '#2a2a2a', '#3a3a3a', // Greys
+      '#0a1a2f', '#102a43',           // Dark Blues
+      '#4a0505', '#631717',           // Dark Reds
+      '#0b240b', '#1b301b',           // Greens
+      '#5a5a5a', '#7a7a7a',           // Silvers/Lighter grey
+      '#2f3542', '#3e4444'            // Slates
+    ];
     return colors[Math.floor(Math.random() * colors.length)];
   }
   
@@ -63,7 +104,6 @@ export class TrafficSystem {
 
   renderVehicle(ctx, v, w, h, fog) {
     const visibility = Math.min(1, Math.max(0, (CONST.TRAFFIC_RENDER_LIMIT - v.distance) / CONST.FADE_IN_DISTANCE));
-    // For vehicles, we allow the scale to go all the way to 0 at the horizon for a "tiny point" effect
     const scaleFactor = visibility;
     
     ctx.save();
@@ -73,7 +113,7 @@ export class TrafficSystem {
       const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
       const pos = this.road.projectPoint(laneOffset, 0, v.distance, w, h);
       
-      const objHeight = 1.4 * v.height;
+      const objHeight = v.height;
       const pixelHeight = objHeight * pos.scale * CONST.ENV_GLOBAL_SCALE * scaleFactor;
       const risingOffset = (1 - visibility) * pixelHeight;
 
@@ -97,8 +137,8 @@ export class TrafficSystem {
   renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0, fog) {
     const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
-    const carWidth = 1.8 * fadeScale; 
-    const carHeight = 1.4 * v.height * fadeScale;
+    const carWidth = v.width * fadeScale; 
+    const carHeight = v.height * fadeScale;
 
     const nbl = this.road.projectPoint(laneOffset - carWidth/2, 0, v.distance, w, h);
     const nbr = this.road.projectPoint(laneOffset + carWidth/2, 0, v.distance, w, h);
@@ -122,8 +162,8 @@ export class TrafficSystem {
     
     const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
-    const carWidth = 1.8 * fadeScale; 
-    const carHeight = 1.4 * v.height * fadeScale;
+    const carWidth = v.width * fadeScale; 
+    const carHeight = v.height * fadeScale;
 
     const lOff = laneOffset - carWidth/2;
     const rOff = laneOffset + carWidth/2;
