@@ -43,10 +43,14 @@ export class Renderer {
     groundGradient.addColorStop(0, fog.color);
     
     // Transition stops at world-space distances to mimic perspective depth
-    // Stop 0.05 is ~150m away
+    // Far distance (~150m)
     groundGradient.addColorStop(0.05, lerpColor(state.biome.groundColor, fog.color, fogAtDist(150)));
-    // Stop 0.17 is ~40m away
+    // Mid-far (~40m)
     groundGradient.addColorStop(0.17, lerpColor(state.biome.groundColor, fog.color, fogAtDist(40)));
+    // Mid-near (~15m)
+    groundGradient.addColorStop(0.35, lerpColor(state.biome.groundColor, fog.color, fogAtDist(15)));
+    // Near (~5m)
+    groundGradient.addColorStop(0.65, lerpColor(state.biome.groundColor, fog.color, fogAtDist(5)));
     
     // Near foreground (screen bottom) has no fog
     groundGradient.addColorStop(1, state.biome.groundColor);

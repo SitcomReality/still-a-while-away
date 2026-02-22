@@ -152,9 +152,12 @@ export class RoadSystem {
     
     // 150m stop (Vertical stop ~0.05)
     roadGradient.addColorStop(0.05, lerpColor('#1a1a1a', fog.color, fogAtDist(150)));
-    
     // 40m stop (Vertical stop ~0.17)
     roadGradient.addColorStop(0.17, lerpColor('#242424', fog.color, fogAtDist(40)));
+    // 15m stop (Vertical stop ~0.35)
+    roadGradient.addColorStop(0.35, lerpColor('#282828', fog.color, fogAtDist(15)));
+    // 5m stop (Vertical stop ~0.65)
+    roadGradient.addColorStop(0.65, lerpColor('#2a2a2a', fog.color, fogAtDist(5)));
     
     // Near part (screen bottom)
     roadGradient.addColorStop(1, '#2a2a2a');
