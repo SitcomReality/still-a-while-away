@@ -119,7 +119,7 @@ export class EnvironmentSystem {
       renderTree(ctx, pos.x, pos.y, renderScale, f, fog, fogFactor);
     } else if (f.type === 'lightpole') {
       const exitFade = Math.max(0, Math.min(1, (relDist - (-5)) / (8 - (-5))));
-      renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade, fog, fogFactor);
+      renderLightpole(ctx, pos.x, pos.y, renderScale, f, exitFade, fog, fogFactor, visibility);
     } else if (f.type === 'bush') {
       renderBush(ctx, pos.x, pos.y, renderScale, f, fog, fogFactor);
     }

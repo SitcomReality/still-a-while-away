@@ -167,7 +167,8 @@ export class TrafficSystem {
   renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0, fog, fogFactor) {
     const { lane, headlightColor, headlightIntensity } = vehicle;
     const isSameDirection = lane === 'left';
-    const lightColor = isSameDirection ? '#ff0000' : headlightColor;
+    const lightColorRaw = isSameDirection ? '#ff0000' : headlightColor;
+    const lightColor = lerpColor(lightColorRaw, fog.color, fogFactor);
     
     // Use a cubic ramp for brightness to make the appearance even more gradual
     const arrivalRamp = Math.pow(fadeScale, 25);
@@ -178,26 +179,27 @@ export class TrafficSystem {
     const lightR = bilinearMap(quad, 0.8, 0.75);
     
     if (!isSameDirection) {
-      // Glow size scales aggressively with the arrival ramp to prevent sudden popping
+      // Oncoming traffic: large atmospheric glow
+      // Suppress glow footprint and intensity in fog to prevent white-out buildup
       const glowSize = 1200 * scale * arrivalRamp;
-      // Attenuate glow by fog factor to prevent distant cars from over-illuminating the scene
-      const glowStrength = 0.5 * arrivalRamp * Math.max(0, 1 - fogFactor * 1.1);
+      const fogSuppression = Math.max(0, 1 - fogFactor * 1.5);
+      const glowStrength = 0.5 * arrivalRamp * fogSuppression;
       
-      if (glowStrength > 0.01) {
-        renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, glowStrength);
-        renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, glowStrength);
-      }
+      renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, glowStrength);
+      renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, glowStrength);
     } else {
+      // Tail lights
+      const fogSuppression = Math.max(0, 1 - fogFactor * 1.2);
       const glowSize = 100 * scale * brightness * fadeScale;
-      ctx.globalAlpha = 0.3 * brightness;
-      ctx.fillStyle = lerpColor(lightColor, fog.color, fogFactor);
+      ctx.globalAlpha = 0.3 * brightness * fogSuppression;
+      ctx.fillStyle = lightColor;
       ctx.beginPath(); ctx.arc(lightL.x, lightL.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(lightR.x, lightR.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
     
     const coreSize = Math.max(0.5, (isSameDirection ? 6 : 8) * scale * fadeScale);
-    ctx.fillStyle = lerpColor(lightColor, fog.color, fogFactor);
+    ctx.fillStyle = lightColor;
     ctx.globalAlpha = brightness * 0.95;
     ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(lightR.x, lightR.y, coreSize/2, 0, Math.PI * 2); ctx.fill();

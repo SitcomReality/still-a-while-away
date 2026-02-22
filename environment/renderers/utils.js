@@ -50,28 +50,17 @@ const gradientCache = new Map();
  * size: radius in pixels
  */
 export function renderGlow(ctx, x, y, color, size, strength = 0.5) {
-  if (size <= 0) return;
+  if (size < 1 || strength <= 0.005) return;
   
-  // Create a unique key for the gradient. Size is rounded to avoid excessive cache growth.
-  const cacheSize = Math.round(size);
-  const cacheKey = `${color}_${cacheSize}_${strength.toFixed(2)}`;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(1, strength);
   
-  let g = gradientCache.get(cacheKey);
-  
-  // Note: Canvas gradients are relative to canvas coordinates, 
-  // so we can only cache the 'pattern' if we translate the context.
-  // For simplicity and compatibility with the current rendering flow,
-  // we recreate the gradient per-location but we've added the placeholder
-  // for a pattern-based approach. Currently recreating but keeping clean.
-  g = ctx.createRadialGradient(x, y, 0, x, y, size);
+  const g = ctx.createRadialGradient(x, y, 0, x, y, size);
   g.addColorStop(0, color);
-  const alphaVal = Math.floor(150 * strength).toString(16).padStart(2, '0');
-  g.addColorStop(0.5, color + alphaVal);
+  g.addColorStop(0.3, color + 'aa');
   g.addColorStop(1, color + '00');
 
-  ctx.save();
-  // Using 'screen' instead of 'lighter' to prevent excessive luminance accumulation
-  ctx.globalCompositeOperation = 'screen';
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(x, y, size, 0, Math.PI * 2);
