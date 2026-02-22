@@ -55,21 +55,21 @@ export class TrafficSystem {
 
     const type = selected.type;
     
-    // Base dimensions in meters
+    // Base dimensions in meters (total height)
     let width = 2.0;
-    let height = 1.2;
+    let height = 1.1;
     let depth = 4.5;
 
     if (type === 'sedan') {
-      width = 2.1; height = 1.1; depth = 4.6;
+      width = 2.1; height = 1.0; depth = 4.6;
     } else if (type === 'suv') {
-      width = 2.2; height = 1.4; depth = 5.0;
+      width = 2.2; height = 1.3; depth = 5.0;
     } else if (type === 'sports') {
-      width = 2.2; height = 0.9; depth = 4.5;
+      width = 2.2; height = 0.85; depth = 4.5;
     } else if (type === 'truck') {
-      width = 2.5; height = 2.8; depth = 10.0;
+      width = 2.5; height = 2.6; depth = 10.0;
     } else if (type === 'bus') {
-      width = 2.8; height = 3.2; depth = 15.0;
+      width = 2.8; height = 3.0; depth = 15.0;
     }
 
     const vehicle = {
@@ -137,22 +137,35 @@ export class TrafficSystem {
   renderVehicleLOD(ctx, w, h, v, fadeScale = 1.0, fog) {
     const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
+    
+    const baseH = v.height * 0.6 * fadeScale;
+    const cabinH = v.height * 0.4 * fadeScale;
     const carWidth = v.width * fadeScale; 
-    const carHeight = v.height * fadeScale;
+    const cabinWidth = carWidth * 0.8;
 
+    // Base Quad
     const nbl = this.road.projectPoint(laneOffset - carWidth/2, 0, v.distance, w, h);
     const nbr = this.road.projectPoint(laneOffset + carWidth/2, 0, v.distance, w, h);
-    const ntl = this.road.projectPoint(laneOffset - carWidth/2, carHeight, v.distance, w, h);
-    const ntr = this.road.projectPoint(laneOffset + carWidth/2, carHeight, v.distance, w, h);
+    const ntl = this.road.projectPoint(laneOffset - carWidth/2, baseH, v.distance, w, h);
+    const ntr = this.road.projectPoint(laneOffset + carWidth/2, baseH, v.distance, w, h);
     
+    // Cabin Quad
+    const cnbl = this.road.projectPoint(laneOffset - cabinWidth/2, baseH, v.distance, w, h);
+    const cnbr = this.road.projectPoint(laneOffset + cabinWidth/2, baseH, v.distance, w, h);
+    const cntl = this.road.projectPoint(laneOffset - cabinWidth/2, baseH + cabinH, v.distance, w, h);
+    const cntr = this.road.projectPoint(laneOffset + cabinWidth/2, baseH + cabinH, v.distance, w, h);
+
     if (nbl.scale <= 0) return;
 
-    const quad = [nbl, nbr, ntr, ntl];
-    const dimFactor = 1.0;
-    // Make traffic fade into fog a bit earlier/stronger so vehicles match scenery fogging
+    const baseQuad = [nbl, nbr, ntr, ntl];
+    const cabinQuad = [cnbl, cnbr, cntr, cntl];
+    
     const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity)));
-    this.renderVehicleSilhouette(ctx, quad, v, fog, fogFactor);
-    this.renderLights(ctx, quad, v, dimFactor, fadeScale, fog, fogFactor);
+    
+    this.renderVehicleSilhouette(ctx, baseQuad, v, fog, fogFactor, false);
+    this.renderVehicleSilhouette(ctx, cabinQuad, v, fog, fogFactor, true, true); // No shadow for cabin
+    
+    this.renderLights(ctx, baseQuad, v, 1.0, fadeScale, fog, fogFactor);
   }
 
   renderVehicle3D(ctx, w, h, v, fadeScale = 1.0, fog) {
@@ -162,46 +175,71 @@ export class TrafficSystem {
     
     const roadW = CONST.ROAD_WIDTH;
     const laneOffset = v.lane === 'right' ? roadW * 0.25 : -roadW * 0.25;
-    const carWidth = v.width * fadeScale; 
-    const carHeight = v.height * fadeScale;
 
-    const lOff = laneOffset - carWidth/2;
-    const rOff = laneOffset + carWidth/2;
+    const baseH = v.height * 0.6 * fadeScale;
+    const cabinH = v.height * 0.4 * fadeScale;
+    const totalH = (v.height) * fadeScale;
+    
+    const baseW = v.width * fadeScale;
+    const cabinW = baseW * 0.8;
+    const cabinZNear = zNear + v.depth * 0.2;
+    const cabinZFar = zFar - v.depth * 0.2;
 
-    // Project all 8 corners with consistent curve reference
+    const lOff = laneOffset - baseW/2;
+    const rOff = laneOffset + baseW/2;
+    const clOff = laneOffset - cabinW/2;
+    const crOff = laneOffset + cabinW/2;
+
+    // Base Corners
     const nbl = this.road.projectPoint(lOff, 0, zNear, w, h, curveRef);
     const nbr = this.road.projectPoint(rOff, 0, zNear, w, h, curveRef);
-    const ntl = this.road.projectPoint(lOff, carHeight, zNear, w, h, curveRef);
-    const ntr = this.road.projectPoint(rOff, carHeight, zNear, w, h, curveRef);
-    
+    const ntl = this.road.projectPoint(lOff, baseH, zNear, w, h, curveRef);
+    const ntr = this.road.projectPoint(rOff, baseH, zNear, w, h, curveRef);
     const fbl = this.road.projectPoint(lOff, 0, zFar, w, h, curveRef);
     const fbr = this.road.projectPoint(rOff, 0, zFar, w, h, curveRef);
-    const ftl = this.road.projectPoint(lOff, carHeight, zFar, w, h, curveRef);
-    const ftr = this.road.projectPoint(rOff, carHeight, zFar, w, h, curveRef);
+    const ftl = this.road.projectPoint(lOff, baseH, zFar, w, h, curveRef);
+    const ftr = this.road.projectPoint(rOff, baseH, zFar, w, h, curveRef);
 
-    const nearQuad = [nbl, nbr, ntr, ntl];
-    // Make traffic fade into fog a bit earlier/stronger so vehicles match scenery fogging
+    // Cabin Corners
+    const cnbl = this.road.projectPoint(clOff, baseH, cabinZNear, w, h, curveRef);
+    const cnbr = this.road.projectPoint(crOff, baseH, cabinZNear, w, h, curveRef);
+    const cntl = this.road.projectPoint(clOff, totalH, cabinZNear, w, h, curveRef);
+    const cntr = this.road.projectPoint(crOff, totalH, cabinZNear, w, h, curveRef);
+    const cfbl = this.road.projectPoint(clOff, baseH, cabinZFar, w, h, curveRef);
+    const cfbr = this.road.projectPoint(crOff, baseH, cabinZFar, w, h, curveRef);
+    const cftl = this.road.projectPoint(clOff, totalH, cabinZFar, w, h, curveRef);
+    const cftr = this.road.projectPoint(crOff, totalH, cabinZFar, w, h, curveRef);
+
     const fogFactor = Math.min(1, Math.max(0, ((v.distance / CONST.TRAFFIC_RENDER_LIMIT) * 1.25) / (1.05 - fog.intensity)));
-    
-    // Draw Surfaces
+
+    // Render Base Box
     ctx.fillStyle = lerpColor(adjustBrightness(v.color, -40), fog.color, fogFactor);
-    drawQuad(ctx, [fbl, fbr, ftr, ftl]); // Far
-
+    drawQuad(ctx, [fbl, fbr, ftr, ftl]);
     ctx.fillStyle = lerpColor(adjustBrightness(v.color, -20), fog.color, fogFactor);
-    if (nbl.x > fbl.x) drawQuad(ctx, [nbl, fbl, ftl, ntl]); // Left
-    if (nbr.x < fbr.x) drawQuad(ctx, [nbr, fbr, ftr, ntr]); // Right
+    if (nbl.x > fbl.x) drawQuad(ctx, [nbl, fbl, ftl, ntl]);
+    if (nbr.x < fbr.x) drawQuad(ctx, [nbr, fbr, ftr, ntr]);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, 10), fog.color, fogFactor);
+    drawQuad(ctx, [ntl, ntr, ftr, ftl]);
 
-    if (ntl.y > ftl.y) {
-      ctx.fillStyle = lerpColor(adjustBrightness(v.color, 10), fog.color, fogFactor);
-      drawQuad(ctx, [ntl, ntr, ftr, ftl]); // Top
-    }
+    // Render Cabin Box
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -35), fog.color, fogFactor);
+    drawQuad(ctx, [cfbl, cfbr, cftr, cftl]);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, -15), fog.color, fogFactor);
+    if (cnbl.x > cfbl.x) drawQuad(ctx, [cnbl, cfbl, cftl, cntl]);
+    if (cnbr.x < cfbr.x) drawQuad(ctx, [cnbr, cfbr, cftr, cntr]);
+    ctx.fillStyle = lerpColor(adjustBrightness(v.color, 25), fog.color, fogFactor);
+    drawQuad(ctx, [cntl, cntr, cftr, cftl]);
 
-    this.renderVehicleSilhouette(ctx, nearQuad, v, fog, fogFactor);
+    const baseNearQuad = [nbl, nbr, ntr, ntl];
+    const cabinNearQuad = [cnbl, cnbr, cntr, cntl];
+
+    this.renderVehicleSilhouette(ctx, baseNearQuad, v, fog, fogFactor, false);
+    this.renderVehicleSilhouette(ctx, cabinNearQuad, v, fog, fogFactor, true, true);
 
     const futureCurve = this.road.getCurveAt(v.distance + 20);
     const currentCurve = this.road.getCurveAt(v.distance);
     const dimFactor = Math.abs(futureCurve - currentCurve) > 0.05 ? 0.3 : 1.0;
-    this.renderLights(ctx, nearQuad, v, dimFactor, fadeScale, fog, fogFactor);
+    this.renderLights(ctx, baseNearQuad, v, dimFactor, fadeScale, fog, fogFactor);
   }
 
   renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0, fog, fogFactor) {
@@ -259,37 +297,37 @@ export class TrafficSystem {
     ctx.globalAlpha = 1;
   }
   
-  renderVehicleSilhouette(ctx, quad, vehicle, fog, fogFactor) {
+  renderVehicleSilhouette(ctx, quad, vehicle, fog, fogFactor, hasWindshield = true, skipShadow = false) {
     const scale = quad[0].scale;
-    const size = CONST.TRAFFIC_SIZE_SCALE * scale;
-    if (size < 4) return;
-    
     const width = Math.abs(quad[1].x - quad[0].x);
     const centerX = (quad[0].x + quad[1].x) / 2;
     
-    ctx.fillStyle = lerpColor('rgba(0,0,0,0.5)', fog.color, fogFactor);
-    ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
+    if (!skipShadow) {
+      ctx.fillStyle = lerpColor('rgba(0,0,0,0.5)', fog.color, fogFactor);
+      ctx.fillRect(centerX - width/2, quad[0].y - 2, width, 4);
+    }
 
     ctx.fillStyle = lerpColor(vehicle.color, fog.color, fogFactor);
     drawQuad(ctx, quad);
     
-    ctx.fillStyle = lerpColor('#0a0a0f', fog.color, fogFactor);
-    drawQuad(ctx, [
-      bilinearMap(quad, 0.1, 0.5),
-      bilinearMap(quad, 0.9, 0.5),
-      bilinearMap(quad, 0.9, 0.1),
-      bilinearMap(quad, 0.1, 0.1)
-    ]);
-    
-    ctx.fillStyle = '#ffffff';
-    ctx.globalAlpha = 0.1;
-    drawQuad(ctx, [
-      bilinearMap(quad, 0, 0.1),
-      bilinearMap(quad, 1, 0.1),
-      bilinearMap(quad, 1, 0),
-      bilinearMap(quad, 0, 0)
-    ]);
-    
-    ctx.globalAlpha = 1;
+    if (hasWindshield) {
+      ctx.fillStyle = lerpColor('#0a0a0f', fog.color, fogFactor);
+      drawQuad(ctx, [
+        bilinearMap(quad, 0.1, 0.8),
+        bilinearMap(quad, 0.9, 0.8),
+        bilinearMap(quad, 0.9, 0.1),
+        bilinearMap(quad, 0.1, 0.1)
+      ]);
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.1;
+      drawQuad(ctx, [
+        bilinearMap(quad, 0, 0.1),
+        bilinearMap(quad, 1, 0.1),
+        bilinearMap(quad, 1, 0),
+        bilinearMap(quad, 0, 0)
+      ]);
+      ctx.globalAlpha = 1;
+    }
   }
 }
