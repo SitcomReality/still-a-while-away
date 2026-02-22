@@ -167,8 +167,7 @@ export class TrafficSystem {
   renderLights(ctx, quad, vehicle, dimFactor, fadeScale = 1.0, fog, fogFactor) {
     const { lane, headlightColor, headlightIntensity } = vehicle;
     const isSameDirection = lane === 'left';
-    const lightColorRaw = isSameDirection ? '#ff0000' : headlightColor;
-    const lightColor = lerpColor(lightColorRaw, fog.color, fogFactor);
+    const lightColor = isSameDirection ? '#ff0000' : headlightColor;
     
     // Use a cubic ramp for brightness to make the appearance even more gradual
     const arrivalRamp = Math.pow(fadeScale, 25);
@@ -181,22 +180,24 @@ export class TrafficSystem {
     if (!isSameDirection) {
       // Glow size scales aggressively with the arrival ramp to prevent sudden popping
       const glowSize = 1200 * scale * arrivalRamp;
-      // Also scale the glow strength
-      const glowStrength = 0.5 * arrivalRamp;
+      // Attenuate glow by fog factor to prevent distant cars from over-illuminating the scene
+      const glowStrength = 0.5 * arrivalRamp * Math.max(0, 1 - fogFactor * 1.1);
       
-      renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, glowStrength);
-      renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, glowStrength);
+      if (glowStrength > 0.01) {
+        renderGlow(ctx, lightL.x, lightL.y, lightColor, glowSize, glowStrength);
+        renderGlow(ctx, lightR.x, lightR.y, lightColor, glowSize, glowStrength);
+      }
     } else {
       const glowSize = 100 * scale * brightness * fadeScale;
       ctx.globalAlpha = 0.3 * brightness;
-      ctx.fillStyle = lightColor;
+      ctx.fillStyle = lerpColor(lightColor, fog.color, fogFactor);
       ctx.beginPath(); ctx.arc(lightL.x, lightL.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(lightR.x, lightR.y, glowSize, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
     
     const coreSize = Math.max(0.5, (isSameDirection ? 6 : 8) * scale * fadeScale);
-    ctx.fillStyle = lightColor;
+    ctx.fillStyle = lerpColor(lightColor, fog.color, fogFactor);
     ctx.globalAlpha = brightness * 0.95;
     ctx.beginPath(); ctx.arc(lightL.x, lightL.y, coreSize/2, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(lightR.x, lightR.y, coreSize/2, 0, Math.PI * 2); ctx.fill();

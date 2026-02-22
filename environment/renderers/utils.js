@@ -70,7 +70,8 @@ export function renderGlow(ctx, x, y, color, size, strength = 0.5) {
   g.addColorStop(1, color + '00');
 
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
+  // Using 'screen' instead of 'lighter' to prevent excessive luminance accumulation
+  ctx.globalCompositeOperation = 'screen';
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(x, y, size, 0, Math.PI * 2);

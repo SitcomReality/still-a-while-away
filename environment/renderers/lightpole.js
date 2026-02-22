@@ -8,7 +8,7 @@ export function renderLightpole(ctx, x, y, scale, pole, exitFade = 1.0, fog = nu
   if (height < 2) return;
   
   const poleColor = fog ? lerpColor('#222222', fog.color, fogFactor) : '#222222';
-  const lightColor = fog ? lerpColor(pole.lightColor, fog.color, fogFactor) : pole.lightColor;
+  const lightColor = pole.lightColor;
 
   // Main vertical pole
   ctx.fillStyle = poleColor;
@@ -24,15 +24,20 @@ export function renderLightpole(ctx, x, y, scale, pole, exitFade = 1.0, fog = nu
     const lightX = x + (armLen * dir) - (width * 0.5 * dir);
     const lightY = y - height + (armHeight / 2);
     
-    // Ambient glow modulated by exitFade
-    renderGlow(ctx, lightX, lightY, lightColor, 7 * scale, 0.5 * exitFade);
+    // Attenuate glow by fog factor to prevent luminance accumulation in the distance
+    const glowIntensity = 0.5 * exitFade * Math.max(0, 1 - fogFactor * 1.1);
+    
+    // Ambient glow modulated by exitFade and fog attenuation
+    if (glowIntensity > 0.01) {
+      renderGlow(ctx, lightX, lightY, lightColor, 7 * scale, glowIntensity);
+    }
     
     // Small fixture housing
     ctx.fillStyle = poleColor;
     ctx.fillRect(lightX - (width * dir), lightY - width, width * 2 * dir, width * 0.5);
 
-    // Bright core light source modulated by exitFade
-    ctx.fillStyle = lightColor;
+    // Bright core light source modulated by exitFade and fog
+    ctx.fillStyle = lerpColor(lightColor, fog.color, fogFactor);
     ctx.globalAlpha = 0.9 * exitFade;
     ctx.beginPath();
     ctx.arc(lightX, lightY, width * 1.2, 0, Math.PI * 2);
