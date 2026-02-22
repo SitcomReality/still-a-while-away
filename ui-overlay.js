@@ -11,27 +11,26 @@ export class UIOverlay {
   }
 
   async startIntroSequence() {
-    // 1. Wake up fade (0 to 150% radius over 6 seconds)
+    // Fade-out the initial black overlay over 4 seconds (fade away the blackness)
     const startTime = performance.now();
-    const duration = 6000;
+    const duration = 4000;
     
-    const animateWake = (now) => {
+    const step = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Use ease-in-out for more organic opening
-      const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-      
-      this.wakeOverlay.style.setProperty('--wake-radius', `${ease * 150}%`);
+      // Ease-out for a gentle reveal
+      const ease = 1 - Math.pow(1 - progress, 2);
+      this.wakeOverlay.style.opacity = String(1 - ease);
       
       if (progress < 1) {
-        requestAnimationFrame(animateWake);
+        requestAnimationFrame(step);
       } else {
+        // Fully hidden, remove overlay from layout and continue intro
         this.wakeOverlay.style.display = 'none';
-        // 2. Ten seconds after the "wake up" completes
         setTimeout(() => this.showNarrative(), 10000);
       }
     };
-    requestAnimationFrame(animateWake);
+    requestAnimationFrame(step);
   }
 
   async showNarrative() {
